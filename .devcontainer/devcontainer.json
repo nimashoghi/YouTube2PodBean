@@ -1,0 +1,12 @@
+// See https://aka.ms/vscode-remote/containers for the
+// documentation about the devcontainer.json format
+{
+    "name": "Python 3",
+    "context": "..",
+    "dockerFile": "Dockerfile",
+    "workspaceFolder": "/workspace",
+    "extensions": [
+        "ms-python.python",
+        "visualstudioexptteam.vscodeintellicode"
+    ]
+}

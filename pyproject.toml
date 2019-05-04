@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "youtube2podbean"
+version = "0.1.0"
+description = ""
+authors = ["Nima Shoghi <nimashoghi@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+requests-oauthlib = "^1.2"
+flask = "^1.0"
+
+[tool.poetry.dev-dependencies]
+pylint = {version = "^2.3",allows-prereleases = true}
+black = {version = "^18.3-alpha.0",allows-prereleases = true}
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
