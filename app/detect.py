@@ -1,3 +1,11 @@
+youtube_watch_url = "https://www.youtube.com/watch?v="
+youtube_search_url = "https://www.googleapis.com/youtube/v3/search"
+
+
+def make_youtube_link(id):
+    return f"{youtube_watch_url}{id}"
+
+
 def get_tokens():
     import pickle
     from datetime import datetime, timezone, timedelta
@@ -33,9 +41,10 @@ def get_videos(published_after=None, page_token=None):
     import requests
 
     return requests.get(
-        "https://www.googleapis.com/youtube/v3/search",
+        youtube_search_url,
         params=build_params(publishedAfter=published_after, pageToken=page_token),
     ).json()
+
 
 def filter_by_title(title):
     import re
@@ -94,7 +103,7 @@ def process_new_video(callback):
                 outtmpl="%(title)s.%(ext)s",
             )
         ) as dl:
-            dl.download([f"https://www.youtube.com/watch?v={id}"])
+            dl.download([make_youtube_link(id)])
             download_thumbnail(title, thumbnail)
             callback(title, f"{title}.mp3", f"{title}.jpg")
 
