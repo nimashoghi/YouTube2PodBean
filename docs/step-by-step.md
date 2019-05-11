@@ -1,5 +1,7 @@
 # Step by Step Setup Guide
 
+### [Make sure you have docker-compose installed](./coreos-docker-compose.md)
+
 ## Step 1: Add `docker-compose.yaml`
 
     cat >> docker-compose.yaml <<EOL
