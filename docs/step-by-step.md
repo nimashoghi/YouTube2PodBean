@@ -5,14 +5,17 @@
     cat >> docker-compose.yaml <<EOL
     version: "3.1"
     services:
-    watcher:
-    image: "nimashoghi/youtube2podbean:latest"
-    env_file: - ./.env
-    volumes: - ./pickles:/app/pickles
-    ports: - "23808:23808"
-    restart: always
-    stdin_open: true
-    tty: true
+        watcher:
+            image: "nimashoghi/youtube2podbean:latest"
+            env_file:
+                - ./.env
+            volumes:
+                - ./pickles:/app/pickles
+            ports:
+                - "23808:23808"
+            restart: always
+            stdin_open: true
+            tty: true
     EOL
 
 ---
