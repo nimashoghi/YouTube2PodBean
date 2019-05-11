@@ -106,7 +106,11 @@ def publish_episode(
         ),
     ).json()
 
-    return result["episode"]
+    try:
+        return result["episode"]
+    except BaseException as e:
+        print(f"Failed to publish episode: {result}")
+        raise e
 
 
 def upload_new_media(
