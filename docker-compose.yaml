@@ -3,12 +3,14 @@ services:
     watcher:
         image: "nimashoghi/youtube2podbean:latest"
         environment:
-            - PODBEAN_CLIENT_ID=d71ef164ed23a50e63643
-            - PODBEAN_CLIENT_SECRET=89c0ebdca0a9c5a4e0f0d
-            - YOUTUBE_API_KEY=AIzaSyBpc2ZQPoAwP_izIHLoMq1ye7A5vNr0JO0
-            - YOUTUBE_CHANNEL_ID=UCEOQ9pSmMEIqfhtCDa2JORw
+            - PODBEAN_CLIENT_ID=
+            - PODBEAN_CLIENT_SECRET=
+            - YOUTUBE_API_KEY=
+            - YOUTUBE_CHANNEL_ID=
             - YOUTUTBE_TITLE_PATTERN=doodle
-            - ACCESS_CODE_PICKLE_PATH=access_code.pickle
-            - PUBLISHED_AFTER_PICKLE_PATH=published_after.pickle
+            - ACCESS_CODE_PICKLE_PATH=/app/pickles/access_code.pickle
+            - PUBLISHED_AFTER_PICKLE_PATH=/app/pickles/published_after.pickle
+        volumes:
+            - ./pickles:/app/pickles
         ports:
             - "23808:23808"
