@@ -4,7 +4,15 @@ from time import sleep
 
 from flask import Flask, request
 
-host = "127.0.0.1"
+
+def get_public_ip():
+    from requests import get
+
+    return get("https://api.ipify.org").text
+
+
+host = "0.0.0.0"
+public_host = get_public_ip()
 port = "23808"
 
 set_start_method("spawn", True)

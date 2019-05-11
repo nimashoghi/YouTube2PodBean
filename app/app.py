@@ -5,11 +5,10 @@ from typing import Callable
 import requests
 from requests_oauthlib import OAuth2Session
 
-from server import get_oauth_code, host, port
+from server import get_oauth_code as get_oauth_code_from_server, public_host, port
+from config import client_id, client_secret
 
-client_id = "6640ad8c00ead54453601"
-client_secret = "01e8f0bcfadd28fb35aeb"
-redirect_uri = f"http://{host}:{port}"
+redirect_uri = f"http://{public_host}:{port}"
 scope = ["podcast_read", "podcast_update", "episode_read", "episode_publish"]
 
 oauth_url = "https://api.podbean.com/v1/dialog/oauth"
@@ -24,7 +23,7 @@ publish_episode_url = "https://api.podbean.com/v1/episodes"
 def authorize(oauth: OAuth2Session):
     authorization_url, _ = oauth.authorization_url(oauth_url)
     print(f"Please visit the link below:\n{authorization_url}")
-    return get_oauth_code()
+    return get_oauth_code_from_server()
 
 
 def get_access_token(code: str, oauth: OAuth2Session):
@@ -76,17 +75,20 @@ def authorize_upload(access_token: str, file_path: str):
 
 
 def upload_file(file_path: str, presigned_url: str):
-    return requests.put(
+    r = requests.put(
         presigned_url,
         headers={"Content-Type": get_content_type(file_path)},
         data=open(file_path, "rb"),
     )
+    if not r.ok:
+        raise Exception("Failed to upload")
 
 
 def publish_episode(
     access_token: str,
-    file_key: str,
     title: str,
+    file_key: str,
+    thumbnail_file_key: str,
     content="",
     status="publish",
     type="public",
@@ -100,44 +102,69 @@ def publish_episode(
             status=status,
             type=type,
             media_key=file_key,
+            logo_key=thumbnail_file_key,
         ),
     ).json()
 
     return result["episode"]
 
 
-def upload_new_media(access_token: str, file_path: str):
+def upload_new_media(
+    access_token: str, title: str, file_path: str, thumbnail_path: str
+):
     presigned_url, file_key = authorize_upload(access_token, file_path)
     upload_file(file_path, presigned_url)
-    return publish_episode(access_token, file_key, get_file_name(file_path))
+
+    presigned_url, thumbnail_file_key = authorize_upload(access_token, thumbnail_path)
+    upload_file(thumbnail_path, presigned_url)
+
+    return publish_episode(access_token, title, file_key, thumbnail_file_key)
 
 
-def get_new_access_token():
-    oauth = OAuth2Session(client_id=client_id, redirect_uri=redirect_uri, scope=scope)
+def get_new_access_code(oauth):
     oauth._client.grant_type = "client_credentials"
-    code = authorize(oauth)
-    return get_access_token(code, oauth)
+    return authorize(oauth)
+
+
+def get_oauth_code(oauth):
+    import pickle
+    from config import access_code_pickle_path
+
+    try:
+        code = pickle.load(open(access_code_pickle_path, "rb"))
+    except:
+        code = get_new_access_code(oauth)
+        pickle.dump(code, open(access_code_pickle_path, "wb"))
+    return code
+
 
 def main():
-    access_token = "3755babd3002cfcbac020451d6456b85a1ad7424"
-    print(f"Your access token is {access_token}")
+    oauth = OAuth2Session(client_id=client_id, redirect_uri=redirect_uri, scope=scope)
+    code = get_oauth_code(oauth)
 
-    # print(
-    #     authorize_upload(access_token, f"{os.path.dirname(__file__)}/bensound-summer.mp3")
-    # )
-    # print(
-    #     upload_file(f"{os.path.dirname(__file__)}/bensound-summer.mp3", presigned_url).text
-    # )
-    # get_content_type(f"./app/bensound-summer.mp3")
-    access_token = get_new_access_token()
-    print(
+    from time import sleep
+    from os import remove
+    from detect import detect_new_videos, process_new_video
+
+    def callback(title, mp3, jpg):
+        print(f"\nUploading {title}")
         upload_new_media(
-            access_token, file_path=f"{os.path.dirname(__file__)}/bensound-creativeminds.mp3"
+            get_access_token(code, oauth), title, file_path=mp3, thumbnail_path=jpg
         )
-    )
+        remove(mp3)
+        remove(jpg)
+        print(f"Uploaded {title}")
+
+    while True:
+        print(".", end="")
+        detect_new_videos(process_new_video(callback))
+
+        sleep(60.0)
+
 
 if __name__ == "__main__":
     from multiprocessing import freeze_support
+
     freeze_support()
 
     main()

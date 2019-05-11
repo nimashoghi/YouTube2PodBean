@@ -288,8 +288,16 @@ optional = false
 python-versions = "*"
 version = "1.11.1"
 
+[[package]]
+category = "main"
+description = "YouTube video downloader"
+name = "youtube-dl"
+optional = false
+python-versions = "*"
+version = "2019.5.11"
+
 [metadata]
-content-hash = "5aa52edccc059045ac1ac82e794ab79e9f9632276274d2406553ad2b6c3ec3fa"
+content-hash = "9e68cb7581199bdc44b09ef13353e2206eb3d8d0ebcdc008b175e1f8eb4d08f1"
 python-versions = "^3.7"
 
 [metadata.hashes]
@@ -319,3 +327,4 @@ typed-ast = ["132eae51d6ef3ff4a8c47c393a4ef5ebf0d1aecc96880eb5d6c8ceab7017cc9b",
 urllib3 = ["2393a695cd12afedd0dcb26fe5d50d0cf248e5a66f75dbd89a3d4eb333a61af4", "a637e5fae88995b256e3409dc4d52c2e2e0ba32c42a6365fee8bbd2238de3cfb"]
 werkzeug = ["0a73e8bb2ff2feecfc5d56e6f458f5b99290ef34f565ffb2665801ff7de6af7a", "7fad9770a8778f9576693f0cc29c7dcc36964df916b83734f4431c0e612a7fbc"]
 wrapt = ["4aea003270831cceb8a90ff27c4031da6ead7ec1886023b80ce0dfe0adf61533"]
+youtube-dl = ["4b34f9da88a5ba1e4fb3cbf296b13252bc61e3f14ce25bcd8dc90a8bfa55dadd", "fe71aa725dc0f86deacdcc91f38492317d53b0ca8ec0f8bddc9961c205b4fea4"]

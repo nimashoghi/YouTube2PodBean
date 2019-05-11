@@ -8,6 +8,7 @@ authors = ["Nima Shoghi <nimashoghi@gmail.com>"]
 python = "^3.7"
 requests-oauthlib = "^1.2"
 flask = "^1.0"
+youtube-dl = "^2019.5"
 
 [tool.poetry.dev-dependencies]
 pylint = {version = "^2.3",allows-prereleases = true}
