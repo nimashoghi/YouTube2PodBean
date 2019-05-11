@@ -22,7 +22,6 @@ You will need Docker and Docker Compose for building and running the Docker imag
 1. Use the `.env.template` file to create a `.env` file with the proper values.
 2. Copy the `docker-compose.yaml` and `.env` files onto your computer/server (e.g. using SCP).
 3. Run `docker-compose up -d; docker-compose logs --follow`
-4. If you haven't signed in using Podbean yet, then a `podbean_url.txt` file will be generated in your
 
 ## Running the Image by Building from Scratch
 
