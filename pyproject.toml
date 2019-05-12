@@ -8,6 +8,7 @@ authors = ["Nima Shoghi <nimashoghi@gmail.com>"]
 python = "^3.7"
 requests-oauthlib = "^1.2"
 flask = "^1.0"
+pafy = "^0.5.4"
 youtube-dl = "^2019.5"
 
 [tool.poetry.dev-dependencies]
