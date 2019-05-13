@@ -57,10 +57,6 @@ def process_new_video(callback):
         if is_processed(video):
             return
 
-        with open("videos.txt", "a") as f:
-            f.write(f"{video.title}\n")
-        return
-
         mp3_path = download_youtube_audio(video)
         thumbnail_path = download_thumbnail(video)
         callback(video.title, video.description, mp3_path, thumbnail_path)
