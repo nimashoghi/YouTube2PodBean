@@ -28,7 +28,12 @@ def authorize_upload(access_token: str, file_path: str):
             content_type=mimetypes.guess_type(file_path)[0] or "audio/mpeg",
         ),
     ).json()
-    return result["presigned_url"], result["file_key"]
+
+    try:
+        return result["presigned_url"], result["file_key"]
+    except BaseException as e:
+        print(f"Failed to authoriez upload: {result}")
+        raise e
 
 
 def upload_file(file_path: str, presigned_url: str):
