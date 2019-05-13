@@ -1,125 +1,101 @@
 {
-    "definitions": {},
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "$id": "http://example.com/root.json",
+    "$schema": "http://json-schema.org/draft-04/schema#",
     "type": "object",
-    "title": "Root",
-    "required": [
-        "PodBean",
-        "YouTube",
-        "Pickle"
-    ],
     "properties": {
         "PodBean": {
-            "$id": "#/properties/PodBean",
             "type": "object",
-            "title": "Podbean",
-            "description": "PodBean API information",
+            "properties": {
+                "ClientId": {
+                    "type": "string"
+                },
+                "ClientSecret": {
+                    "type": "string"
+                }
+            },
             "required": [
                 "ClientId",
                 "ClientSecret"
-            ],
-            "properties": {
-                "ClientId": {
-                    "$id": "#/properties/PodBean/properties/ClientId",
-                    "type": "string",
-                    "title": "ClientID",
-                    "description": "PodBean API Client ID",
-                    "default": "",
-                    "examples": [
-                        ""
-                    ],
-                    "pattern": "^(.*)$"
-                },
-                "ClientSecret": {
-                    "$id": "#/properties/PodBean/properties/ClientSecret",
-                    "type": "string",
-                    "title": "ClientSecret",
-                    "description": "PodBean API Client Secret",
-                    "default": "",
-                    "examples": [
-                        ""
-                    ],
-                    "pattern": "^(.*)$"
-                }
-            }
+            ]
         },
         "YouTube": {
-            "$id": "#/properties/YouTube",
             "type": "object",
-            "title": "YouTube",
-            "description": "YouTube Configuration",
-            "required": [
-                "ApiKey",
-                "ChannelId",
-                "TitlePattern"
-            ],
             "properties": {
-                "ApiKey": {
-                    "$id": "#/properties/YouTube/properties/ApiKey",
-                    "type": "string",
-                    "title": "Api Key",
-                    "description": "YouTube Data v3 API Key",
-                    "default": "",
-                    "examples": [
-                        ""
-                    ],
-                    "pattern": "^(.*)$"
-                },
                 "ChannelId": {
-                    "$id": "#/properties/YouTube/properties/ChannelId",
-                    "type": "string",
-                    "title": "Channel ID",
-                    "description": "Channel ID of the channel to watch",
-                    "default": "",
-                    "examples": [
-                        ""
-                    ],
-                    "pattern": "^(.*)$"
+                    "type": "string"
+                },
+                "PollingRate": {
+                    "type": "number"
                 },
                 "TitlePattern": {
-                    "$id": "#/properties/YouTube/properties/TitlePattern",
-                    "type": "string",
-                    "title": "Title Pattern",
-                    "description": "Regular expression pattern for the title to look for",
-                    "default": "",
-                    "examples": [
-                        "doodle"
+                    "type": "string"
+                },
+                "TitleNegativePattern": {
+                    "type": "string"
+                },
+                "CustomVideos": {
+                    "type": "array",
+                    "items": [
+                        {
+                            "type": "string"
+                        }
                     ],
-                    "pattern": "^(.*)$"
+                    "additionalItems": {
+                        "title": "Additional item",
+                        "type": "number"
+                    }
                 }
-            }
+            },
+            "required": [
+                "ChannelId",
+                "PollingRate",
+                "TitlePattern",
+                "TitleNegativePattern",
+                "CustomVideos"
+            ]
         },
         "Pickle": {
-            "$id": "#/properties/Pickle",
             "type": "object",
-            "title": "Pickle",
-            "required": [
-                "AccessCode",
-                "PublishedAfter"
-            ],
             "properties": {
                 "AccessCode": {
-                    "$id": "#/properties/Pickle/properties/AccessCode",
-                    "type": "string",
-                    "title": "Accesscode",
-                    "default": "",
-                    "examples": [
-                        "/app/pickles/access_code.pickle"
-                    ],
-                    "pattern": "^(.*)$"
+                    "type": "string"
                 },
-                "PublishedAfter": {
-                    "$id": "#/properties/Pickle/properties/PublishedAfter",
-                    "type": "string",
-                    "title": "Publishedafter",
-                    "default": "",
-                    "examples": [
-                        "/app/pickles/published_after.pickle"
-                    ],
-                    "pattern": "^(.*)$"
+                "Processed": {
+                    "type": "string"
+                },
+                "PlaylistHistory": {
+                    "type": "string"
                 }
-            }
+            },
+            "required": [
+                "AccessCode",
+                "Processed",
+                "PlaylistHistory"
+            ]
+        },
+        "Server": {
+            "type": "object",
+            "properties": {
+                "Host": {
+                    "type": "string"
+                },
+                "Port": {
+                    "type": "string"
+                },
+                "PublicHost": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Host",
+                "Port",
+                "PublicHost"
+            ]
         }
-    }
+    },
+    "required": [
+        "PodBean",
+        "YouTube",
+        "Pickle",
+        "Server"
+    ]
 }

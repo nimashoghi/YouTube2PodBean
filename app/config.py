@@ -4,11 +4,13 @@ from json import load
 from os import environ
 
 
-def get_pickle(path, get_default):
+def load_pickle(path, get_default=None):
     try:
         with open(path, "rb") as f:
             value = pickle.load(f)
     except (OSError, IOError):
+        if get_default is None:
+            raise
         value = get_default()
         with open(path, "wb") as f:
             pickle.dump(value, f)
@@ -38,7 +40,7 @@ def config(config_name: str, default=None):
     config_names = config_name.split(":")
 
     def retrieve():
-        with open(environ.get("CONFIG_LOCATION", "settings.json"), "r") as f:
+        with open(environ.get("SETTINGS_FILE", "settings.json"), "r") as f:
             json = load(f)
         try:
             value = reduce(lambda acc, update: acc[update], config_names, json)
@@ -69,16 +71,15 @@ client_secret = config("PodBean:ClientSecret")
 
 youtube_api_key = config("YouTube:ApiKey")
 channel_id = config("YouTube:ChannelId")
+polling_rate = config("YouTube:PollingRate", default=60.0)
 title_pattern = config("YouTube:TitlePattern", default=".+")
-videos = config("YouTube:Videos", default=[])
+title_negative_pattern = config("YouTube:TitleNegativePattern", default="")
+videos = config("YouTube:CustomVideos", default=[])
 
 access_code_pickle_path = config(
     "Pickle:AccessCode", default="pickles/access_code.pickle"
 )
-processed_videos_pickle_path = config(
-    "Pickle:ProcessedVideos", default="pickles/processed_videos.pickle"
+processed_pickle_path = config("Pickle:Processed", default="pickles/processed.pickle")
+playlist_history_pickle_path = config(
+    "Pickle:PlaylistHistory", default="pickles/playlist_history.pickle"
 )
-published_after_pickle_path = config(
-    "Pickle:PublishedAfter", default="pickles/published_after.pickle"
-)
-videos_pickle_path = config("Pickle:Videos", default="pickles/videos.pickle")

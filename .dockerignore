@@ -1,0 +1,7 @@
+__pycache__/
+docs/
+pickles/
+.devcontainer/
+.vscode/
+.env
+.env.template

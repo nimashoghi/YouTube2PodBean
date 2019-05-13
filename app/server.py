@@ -4,7 +4,6 @@ from time import sleep
 
 from flask import Flask, request
 
-
 set_start_method("spawn", True)
 
 

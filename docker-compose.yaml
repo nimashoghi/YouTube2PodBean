@@ -1,11 +1,21 @@
 version: "3.1"
 services:
+    configurator:
+        image: "nimashoghi/configurator-server"
+        environment:
+            - SETTINGS_FILE=/app/settings.json
+            - UPDATE_PASSWORD=wG6gIvi7jE49yaNH5gRbNMCiUvcTn5IOCClsIPhcwkysE1i63wM41hml8GdRTTT6
+        volumes:
+            - ./settings.json:/app/settings.json
+        ports:
+            - "80:80"
     watcher:
         image: "nimashoghi/youtube2podbean:latest"
-        env_file:
-            - ./.env
+        environment:
+            - SETTINGS_FILE=/app/settings.json
         volumes:
             - ./pickles:/app/pickles
+            - ./settings.json:/app/settings.json
         ports:
             - "23808:23808"
         restart: always
