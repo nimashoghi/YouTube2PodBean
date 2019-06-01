@@ -71,6 +71,7 @@ client_secret = config("PodBean:ClientSecret")
 
 youtube_api_key = config("YouTube:ApiKey")
 start_from = config("YouTube:StartFrom", default="")
+video_process_delay = config("YouTube:VideoProcessDelay", default=10.0)
 channel_id = config("YouTube:ChannelId")
 polling_rate = config("YouTube:PollingRate", default=60.0)
 title_pattern = config("YouTube:TitlePattern", default=".+")

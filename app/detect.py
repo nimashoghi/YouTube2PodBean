@@ -113,6 +113,9 @@ def check_start_from(videos, start_from):
 
 
 def detect_videos(f, new_only=True, start_from=None):
+    from app.config import video_process_delay
+    from time import sleep
+
     if start_from:
         print(f'Video start point detected. Checking videos up to "{start_from}"')
 
@@ -129,3 +132,7 @@ def detect_videos(f, new_only=True, start_from=None):
 
     for item in items:
         f(item)
+
+        delay = video_process_delay()
+        print(f"Finished processing {item.title}. Waiting for {delay} seconds")
+        sleep(delay)
