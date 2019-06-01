@@ -132,7 +132,7 @@ def main():
     from time import sleep
     from os import remove
     from app.detect import detect_videos, process_new_video
-    from app.config import polling_rate, videos
+    from app.config import polling_rate, start_from, videos
 
     def video_found(title, description, mp3, jpg):
         from oauthlib.oauth2.rfc6749.errors import (
@@ -160,7 +160,7 @@ def main():
     process_new_video_callback = process_new_video(video_found)
 
     print("Processing all videos...")
-    detect_videos(process_new_video_callback, new_only=False)
+    detect_videos(process_new_video_callback, new_only=False, start_from=start_from())
 
     while True:
         print("------------------------")
@@ -171,7 +171,7 @@ def main():
             process_new_video_callback(pafy.new(id))
 
         print("Processing new videos...")
-        detect_videos(process_new_video_callback)
+        detect_videos(process_new_video_callback, start_from=start_from())
 
         print()
         print("------------------------")

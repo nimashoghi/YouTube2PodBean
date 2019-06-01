@@ -70,6 +70,7 @@ client_id = config("PodBean:ClientId")
 client_secret = config("PodBean:ClientSecret")
 
 youtube_api_key = config("YouTube:ApiKey")
+start_from = config("YouTube:StartFrom", default="")
 channel_id = config("YouTube:ChannelId")
 polling_rate = config("YouTube:PollingRate", default=60.0)
 title_pattern = config("YouTube:TitlePattern", default=".+")

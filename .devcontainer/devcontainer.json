@@ -1,12 +1,8 @@
-// See https://aka.ms/vscode-remote/containers for the
-// documentation about the devcontainer.json format
 {
     "name": "Python 3",
-    "context": "..",
-    "dockerFile": "Dockerfile",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "youtube2podbean",
     "workspaceFolder": "/workspace",
-    "extensions": [
-        "ms-python.python",
-        "visualstudioexptteam.vscodeintellicode"
-    ]
+    "shutdownAction": "stopCompose",
+    "extensions": ["ms-python.python", "visualstudioexptteam.vscodeintellicode"]
 }

@@ -93,14 +93,33 @@ def get_all_uploads(refetch_latest=0):
     return new_items_in_playlist, saved_playlist
 
 
-def detect_videos(f, new_only=True):
+def check_start_from(videos, start_from):
+    if not start_from:
+        yield from videos
+    else:
+        for item in videos:
+            yield item
+            if item.videoid == start_from:
+                print(
+                    f'Video start point detected. Checking videos up to "{item.title}"'
+                )
+                break
+
+
+def detect_videos(f, new_only=True, start_from=None):
+    if start_from:
+        print(f'Video start point detected. Checking videos up to "{start_from}"')
+
     new_items, all_videos = get_all_uploads()
     items = reversed(
         [
             item
-            for item in (all_videos if not new_only else new_items)
+            for item in check_start_from(
+                all_videos if not new_only else new_items, start_from
+            )
             if is_valid_title(item.title)
         ]
     )
+
     for item in items:
         f(item)
