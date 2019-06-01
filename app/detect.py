@@ -8,10 +8,16 @@ def is_valid_title(title):
     )
 
 
+def sanitize_title(title):
+    return "".join(
+        [c for c in title if c.isalpha() or c.isdigit() or c == " "]
+    ).rstrip()
+
+
 def download_thumbnail(video):
     from app.download import download_to_path
 
-    title = video.title
+    title = sanitize_title(video.title)
     url = video.bigthumbhd if video.bigthumbhd else video.bigthumb
 
     def get_url_extension(url, default="jpg"):
@@ -30,7 +36,7 @@ def download_youtube_audio(video):
 
     best = video.getbestaudio(preftype="m4a")
 
-    title = video.title
+    title = sanitize_title(video.title)
     url = best.url
 
     print(f"Downloading audio stream of '{title}' from {url}")
