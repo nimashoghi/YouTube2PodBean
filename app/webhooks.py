@@ -18,6 +18,10 @@ def get_avatar(channel_id):
     return result["items"][0]["snippet"]["thumbnails"]["default"]["url"]
 
 
+def clip_text(text, length=128):
+    return f"{text[:length]}..." if len(text) > length else text
+
+
 def send_webhook(video, jpg, avatar_url, webhook_url):
     from dateutil import parser
     from discord_webhook import DiscordEmbed, DiscordWebhook
@@ -27,16 +31,18 @@ def send_webhook(video, jpg, avatar_url, webhook_url):
     webhook = DiscordWebhook(url=webhook_url)
 
     embed = DiscordEmbed()
+    embed.set_url(video.watchv_url)
     embed.set_color(color_tuple_to_int(ColorThief(jpg).get_color(quality=1)))
     embed.set_title(video.title)
-    embed.set_description(video.watchv_url)
+    embed.add_embed_field(name="Description", value=clip_text(video.description))
     embed.set_author(
         name=video.author,
         url=f"https://www.youtube.com/user/{video.username}",
-        icon_url=get_avatar(video.username),
+        icon_url=avatar_url,
     )
-    embed.set_timestamp(str(parser.parse(video.published)))
-    embed.set_image(url=video.bigthumbhd, width=480, height=360)
+    embed.set_timestamp(parser.parse(video.published).isoformat())
+    embed.set_thumbnail(url=video.bigthumbhd, width=480, height=360)
+    # embed.set_image(url=video.bigthumbhd, width=480, height=360)
     embed.set_footer(text=f"Duration: {video.duration}")
 
     webhook.add_embed(embed)
