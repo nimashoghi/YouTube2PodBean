@@ -133,13 +133,17 @@ def main():
     from os import remove
     from app.detect import detect_videos, process_new_video
     from app.config import polling_rate, start_from, videos
+    from app.webhooks import process_webhooks
 
-    def video_found(title, description, mp3, jpg):
+    def video_found(video, title, description, mp3, jpg, new):
         from oauthlib.oauth2.rfc6749.errors import (
             InvalidGrantError,
             TokenExpiredError,
             InvalidTokenError,
         )
+
+        if new:
+            process_webhooks(video, jpg)
 
         while True:
             try:
@@ -157,10 +161,11 @@ def main():
                 print("Token expired... refreshing")
                 refresh_access_token(oauth)
 
-    process_new_video_callback = process_new_video(video_found)
+    process_video_callback = process_new_video(video_found, new=False)
+    process_new_video_callback = process_new_video(video_found, new=True)
 
     print("Processing all videos...")
-    detect_videos(process_new_video_callback, new_only=False, start_from=start_from())
+    detect_videos(process_video_callback, new_only=False, start_from=start_from())
 
     while True:
         print("------------------------")
@@ -168,7 +173,7 @@ def main():
 
         print("Processing manual videos...")
         for id in videos():
-            process_new_video_callback(pafy.new(id))
+            process_video_callback(pafy.new(id))
 
         print("Processing new videos...")
         detect_videos(process_new_video_callback, start_from=start_from())

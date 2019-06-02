@@ -78,6 +78,8 @@ title_pattern = config("YouTube:TitlePattern", default=".+")
 title_negative_pattern = config("YouTube:TitleNegativePattern", default="")
 videos = config("YouTube:CustomVideos", default=[])
 
+webhook_url_list = config("WebHook:UrlList", default=[])
+
 access_code_pickle_path = config(
     "Pickle:AccessCode", default="pickles/access_code.pickle"
 )

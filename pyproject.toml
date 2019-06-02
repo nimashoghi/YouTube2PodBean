@@ -10,6 +10,9 @@ requests-oauthlib = "^1.2"
 flask = "^1.0"
 pafy = "^0.5.4"
 youtube-dl = "^2019.5"
+discord_webhook = "^0.4.1"
+python-dateutil = "^2.8"
+colorthief = "^0.2.1"
 
 [tool.poetry.dev-dependencies]
 pylint = {version = "^2.3",allows-prereleases = true}

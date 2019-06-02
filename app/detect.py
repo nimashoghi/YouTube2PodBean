@@ -58,14 +58,14 @@ def is_processed(video):
         return False
 
 
-def process_new_video(callback):
+def process_new_video(callback, new=False):
     def process(video):
         if is_processed(video):
             return
 
         mp3_path = download_youtube_audio(video)
         thumbnail_path = download_thumbnail(video)
-        callback(video.title, video.description, mp3_path, thumbnail_path)
+        callback(video, video.title, video.description, mp3_path, thumbnail_path, new)
 
     return process
 
