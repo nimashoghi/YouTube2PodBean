@@ -106,6 +106,8 @@ pillow==6.0.0 \
 python-dateutil==2.8.0 \
     --hash=sha256:7e6584c74aeed623791615e26efd690f29817a27c73085b78e4bad02493df2fb \
     --hash=sha256:c89805f6f4d64db21ed966fda138f8a5ed7a4fdbc1a8ee329ce1b74e3c74da9e
+python-wordpress-xmlrpc==2.3 \
+    --hash=sha256:e15a8e9aca16db169369e5967299c29965570ed83c7c3ad418ed59b5ad1471bd
 requests==2.21.0 \
     --hash=sha256:502a824f31acdacb3a35b6690b5fbf0bc41d63a24a45c4004352b0242707598e \
     --hash=sha256:7bf2a778576d825600030a110f3c0e3e8edc51dfaafe1c146e39a2027784957b
