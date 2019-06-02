@@ -1,0 +1,145 @@
+{
+    "title": "YouTube2PodBean Settings",
+    "description": "Contact Nima (nimashoghi@gmail.com) for more information",
+    "type": "object",
+    "properties": {
+        "PodBean": {
+            "type": "object",
+            "title": "PodBean Settings",
+            "description": "You can get these settings from PodBean's developer center at https://developers.podbean.com/",
+            "properties": {
+                "ClientId": {
+                    "title": "Client ID",
+                    "description": "The Client ID provided from the \"My Apps\" section of PodBean's developer portal. See the following screenshot: https://i.imgur.com/YpkclUu.png",
+                    "type": "string"
+                },
+                "ClientSecret": {
+                    "title": "Client Secret",
+                    "description": "The Client Secret provided from the \"My Apps\" section of PodBean's developer portal. See the following screenshot: https://i.imgur.com/QysM3Bn.png",
+                    "type": "string"
+                }
+            },
+            "required": ["ClientId", "ClientSecret"]
+        },
+        "YouTube": {
+            "type": "object",
+            "title": "YouTube Settings",
+            "properties": {
+                "ChannelId": {
+                    "title": "Channel ID",
+                    "description": "How to get your channel ID: https://www.youtube.com/watch?v=tUhIA3pIHSQ",
+                    "type": "string"
+                },
+                "StartFrom": {
+                    "title": "Starting Video",
+                    "description": "The video id (https://www.youtube.com/watch?v={id}) of the video we should start with when checking YouTube.",
+                    "type": "string"
+                },
+                "PollingRate": {
+                    "title": "Polling Rate",
+                    "description": "How many seconds should we wait before checking YouTube again?",
+                    "type": "number"
+                },
+                "TitlePattern": {
+                    "title": "Title Pattern",
+                    "description": "Regular expression (regex) pattern that decides if a video should be uploaded to PodBean.\nComplete guide on regex: https://code.tutsplus.com/tutorials/you-dont-know-anything-about-regular-expressions-a-complete-guide--net-7869",
+                    "type": "string"
+                },
+                "TitleNegativePattern": {
+                    "title": "Title Skip Pattern",
+                    "description": "If this regular expression (regex) passes, then the video will be skipped.\nComplete guide on regex: https://code.tutsplus.com/tutorials/you-dont-know-anything-about-regular-expressions-a-complete-guide--net-7869",
+                    "type": "string"
+                },
+                "CustomVideos": {
+                    "title": "List of Videos That Should be Manually Processed",
+                    "description": "If you have some videos that you want to consider, even though they don't match the patterns, you can put their URLs here.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": ["ChannelId", "PollingRate", "TitlePattern"]
+        },
+        "WebHook": {
+            "type": "object",
+            "title": "Web Hook Settings",
+            "properties": {
+                "UrlList": {
+                    "title": "Web Hook URLs",
+                    "description": "List of Discord webhook URLs to publish to. You can get Discord webhook URLs through the Discord channel settings: https://i.imgur.com/YDltDHJ.gifv",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "WordPress": {
+            "type": "object",
+            "title": "WordPress Settings",
+            "properties": {
+                "XmlRpcUrl": {
+                    "title": "XML RPC Gateway URL",
+                    "description": "This should be http://your_wp_website/xmlrpc.php by default",
+                    "type": "string"
+                },
+                "Username": {
+                    "title": "Username",
+                    "description": "Username of the account that posts on your WP website",
+                    "type": "string"
+                },
+                "Password": {
+                    "title": "Password",
+                    "description": "Password of the account that posts on your WP website",
+                    "type": "string"
+                },
+                "EmbedWidth": {
+                    "title": "Embedded YouTube Video Width",
+                    "description": "The width of the embedded YouTube video on your WordPress post",
+                    "type": "number",
+                    "default": 560
+                },
+                "EmbedHeight": {
+                    "title": "Embedded YouTube Video Height",
+                    "description": "The height of the embedded YouTube video on your WordPress post",
+                    "type": "number",
+                    "default": 315
+                }
+            }
+        },
+        "Pickle": {
+            "title": "Pickle Settings (Advanced)",
+            "description": "Do not touch these settings unless you know what you're doing.",
+            "type": "object",
+            "properties": {
+                "AccessCode": {
+                    "type": "string"
+                },
+                "Processed": {
+                    "type": "string"
+                },
+                "PlaylistHistory": {
+                    "type": "string"
+                }
+            }
+        },
+        "Server": {
+            "title": "Server Settings (Advanced)",
+            "description": "Do not touch these settings unless you know what you're doing.",
+            "type": "object",
+            "properties": {
+                "Host": {
+                    "type": "string"
+                },
+                "Port": {
+                    "type": "string"
+                },
+                "PublicHost": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "required": ["PodBean", "YouTube", "WebHook", "WordPress"]
+}
