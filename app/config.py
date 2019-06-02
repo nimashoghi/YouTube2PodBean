@@ -80,6 +80,12 @@ videos = config("YouTube:CustomVideos", default=[])
 
 webhook_url_list = config("WebHook:UrlList", default=[])
 
+wp_xmlrpc_url = config("WordPress:XmlRpcUrl", default="")
+wp_username = config("WordPress:Username", default="")
+wp_password = config("WordPress:Password", default="")
+wp_embed_width = config("WordPress:EmbedWidth", default=560)
+wp_embed_height = config("WordPress:EmbedHeight", default=315)
+
 access_code_pickle_path = config(
     "Pickle:AccessCode", default="pickles/access_code.pickle"
 )
