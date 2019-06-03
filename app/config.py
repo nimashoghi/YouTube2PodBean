@@ -77,6 +77,7 @@ host = config("Server:Host", default="0.0.0.0")
 port = config("Server:Port", default="23808")
 public_host = config("Server:PublicHost", default=get_public_ip())
 
+podbean_enabled = config("PodBean:Enabled", default=False)
 client_id = config("PodBean:ClientId")
 client_secret = config("PodBean:ClientSecret")
 

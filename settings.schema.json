@@ -7,13 +7,19 @@
             "type": "boolean",
             "title": "Enabled (Kill Switch)",
             "description": "Should the service start? Set this to off if you want to start the server but have it wait until you finish some configuration.",
-            "default": false
+            "default": true
         },
         "PodBean": {
             "type": "object",
             "title": "PodBean Settings",
             "description": "You can get these settings from PodBean's developer center at https://developers.podbean.com/",
             "properties": {
+                "Enabled": {
+                    "title": "PodBean Posting Enabled",
+                    "description": "Should we post new YouTube videos to PodBean?",
+                    "type": "boolean",
+                    "default": true
+                },
                 "ClientId": {
                     "title": "Client ID",
                     "description": "The Client ID provided from the \"My Apps\" section of PodBean's developer portal. See the following screenshot: https://i.imgur.com/YpkclUu.png",
@@ -35,7 +41,7 @@
                     "title": "YouTube Polling Enabled",
                     "description": "Should we poll the YouTube servers? Turning this off disables checking new YouTube videos (in other words, the app will not do anything).",
                     "type": "boolean",
-                    "default": false
+                    "default": true
                 },
                 "ChannelId": {
                     "title": "Channel ID",
@@ -81,7 +87,7 @@
                     "title": "Discord Web Hook Posting Enabled",
                     "description": "Should we post new YouTube videos to Discord?",
                     "type": "boolean",
-                    "default": false
+                    "default": true
                 },
                 "UrlList": {
                     "title": "Web Hook URLs",
@@ -107,7 +113,7 @@
                     "title": "WordPress Posting Enabled",
                     "description": "Should we post new YouTube videos to WordPress?",
                     "type": "boolean",
-                    "default": false
+                    "default": true
                 },
                 "XmlRpcUrl": {
                     "title": "XML RPC Gateway URL",

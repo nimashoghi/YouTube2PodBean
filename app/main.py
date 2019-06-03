@@ -79,6 +79,11 @@ def publish_episode(
 def upload_and_publish_episode(
     access_token: str, title: str, description: str, file_path: str, thumbnail_path: str
 ):
+    from app.config import podbean_enabled
+
+    if not podbean_enabled():
+        return
+
     presigned_url, file_key = authorize_upload(access_token, file_path)
     upload_file(file_path, presigned_url)
 
