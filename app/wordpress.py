@@ -22,10 +22,7 @@ def add_anchor_to_urls(text: str):
 
     from app.constants import URL_REGEX
 
-    for match in re.findall(URL_REGEX, text):
-        text = text.replace(match, f'<a href="{match}">{match}</a>', 1)
-
-    return text
+    return re.sub(URL_REGEX, r'<a href="\1">\1</a>', text)
 
 
 def process_description(description):
@@ -50,4 +47,5 @@ def post_video(video):
     )
     post.post_status = "publish"
 
-    return client.call(posts.NewPost(post))
+    id = client.call(posts.NewPost(post))
+    print(f'Successfully created WordPress post (ID = {id}) for "{video.title}"')

@@ -61,11 +61,13 @@ def is_processed(video):
 def process_new_video(callback, new=False):
     def process(video):
         if is_processed(video):
-            return
+            return False
 
         mp3_path = download_youtube_audio(video)
         thumbnail_path = download_thumbnail(video)
         callback(video, video.title, video.description, mp3_path, thumbnail_path, new)
+
+        return True
 
     return process
 
@@ -74,7 +76,10 @@ def get_uploads_playlist_id():
     from app.config import channel_id
 
     playlist_id = channel_id()
-    return f"{playlist_id[:1]}U{playlist_id[2:]}"
+    if playlist_id[1] == "C":
+        return f"{playlist_id[:1]}U{playlist_id[2:]}"
+    else:
+        return playlist_id
 
 
 def get_all_uploads(refetch_latest=0):
@@ -137,7 +142,8 @@ def detect_videos(f, new_only=True, start_from=None):
     )
 
     for item in items:
-        f(item)
+        if not f(item):
+            continue
 
         delay = video_process_delay()
         print(f"Finished processing {item.title}. Waiting for {delay} seconds")

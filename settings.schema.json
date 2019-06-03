@@ -3,6 +3,12 @@
     "description": "Contact Nima (nimashoghi@gmail.com) for more information",
     "type": "object",
     "properties": {
+        "Enabled": {
+            "type": "boolean",
+            "title": "Enabled (Kill Switch)",
+            "description": "Should the service start? Set this to off if you want to start the server but have it wait until you finish some configuration.",
+            "default": false
+        },
         "PodBean": {
             "type": "object",
             "title": "PodBean Settings",
@@ -29,7 +35,7 @@
                     "title": "YouTube Polling Enabled",
                     "description": "Should we poll the YouTube servers? Turning this off disables checking new YouTube videos (in other words, the app will not do anything).",
                     "type": "boolean",
-                    "default": "false"
+                    "default": false
                 },
                 "ChannelId": {
                     "title": "Channel ID",
@@ -75,7 +81,7 @@
                     "title": "Discord Web Hook Posting Enabled",
                     "description": "Should we post new YouTube videos to Discord?",
                     "type": "boolean",
-                    "default": "false"
+                    "default": false
                 },
                 "UrlList": {
                     "title": "Web Hook URLs",
@@ -101,7 +107,7 @@
                     "title": "WordPress Posting Enabled",
                     "description": "Should we post new YouTube videos to WordPress?",
                     "type": "boolean",
-                    "default": "false"
+                    "default": false
                 },
                 "XmlRpcUrl": {
                     "title": "XML RPC Gateway URL",

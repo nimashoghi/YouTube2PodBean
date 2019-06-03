@@ -1,6 +1,6 @@
 import pickle
 from functools import reduce
-from json import load
+from json import dump, load
 from os import environ
 
 
@@ -40,8 +40,17 @@ def config(config_name: str, default=None):
     config_names = config_name.split(":")
 
     def retrieve():
-        with open(environ.get("SETTINGS_FILE", "settings.json"), "r") as f:
+        from os import path
+
+        settings_file = environ.get("SETTINGS_FILE", "settings.json")
+
+        if not path.exists(settings_file):
+            with open(settings_file, "w") as f:
+                dump({}, f)
+
+        with open(settings_file, "r") as f:
             json = load(f)
+
         try:
             value = reduce(lambda acc, update: acc[update], config_names, json)
             if not value and default is not None:
@@ -61,6 +70,8 @@ def get_public_ip():
 
     return get("https://api.ipify.org").text
 
+
+enabled = config("Enabled", default=False)
 
 host = config("Server:Host", default="0.0.0.0")
 port = config("Server:Port", default="23808")

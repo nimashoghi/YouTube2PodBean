@@ -125,11 +125,19 @@ def ensure_has_oauth_token(oauth: OAuth2Session):
 
 
 def main():
+    from app.config import enabled
+    from time import sleep
+
+    while not enabled():
+        print(
+            "Application is not enabled (kill switch)... Checking again in 5 seconds."
+        )
+        sleep(5.0)
+
     oauth = OAuth2Session(client_id=client_id(), redirect_uri=redirect_uri, scope=scope)
     ensure_has_oauth_token(oauth)
 
     import pafy
-    from time import sleep
     from os import remove
     from app.detect import detect_videos, process_new_video
     from app.config import polling_rate, start_from, videos

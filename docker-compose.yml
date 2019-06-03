@@ -12,7 +12,8 @@ services:
         ports:
             - "80:80"
     watcher:
-        image: "nimashoghi/youtube2podbean:latest"
+        # image: "nimashoghi/youtube2podbean:latest"
+        build: .
         environment:
             - SETTINGS_FILE=/app/settings.json
         volumes:
@@ -23,3 +24,25 @@ services:
         restart: always
         stdin_open: true
         tty: true
+        depends_on:
+            - configurator
+    wordpress:
+        image: wordpress
+        restart: always
+        ports:
+            - 8080:80
+        environment:
+            WORDPRESS_DB_HOST: db
+            WORDPRESS_DB_USER: exampleuser
+            WORDPRESS_DB_PASSWORD: examplepass
+            WORDPRESS_DB_NAME: exampledb
+        depends_on:
+            - db
+    db:
+        image: mysql:5.7
+        restart: always
+        environment:
+            MYSQL_DATABASE: exampledb
+            MYSQL_USER: exampleuser
+            MYSQL_PASSWORD: examplepass
+            MYSQL_RANDOM_ROOT_PASSWORD: "1"

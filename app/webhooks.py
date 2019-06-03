@@ -7,12 +7,12 @@ def color_tuple_to_int(tuple):
     )
 
 
-def get_avatar(channel_id):
+def get_avatar(username):
     from requests import get
     from pafy import g
 
     result = get(
-        f"https://www.googleapis.com/youtube/v3/channels?part=snippet&fields=items%2Fsnippet%2Fthumbnails%2Fdefault&id={channel_id}&key={g.api_key}"
+        f"https://www.googleapis.com/youtube/v3/channels?part=snippet&fields=items%2Fsnippet%2Fthumbnails%2Fdefault&forUsername={username}&key={g.api_key}"
     ).json()
 
     return result["items"][0]["snippet"]["thumbnails"]["default"]["url"]
@@ -61,11 +61,13 @@ def process_webhooks(video, jpg):
         )
         return
 
-    from app.config import channel_id, webhook_url_list
+    from app.config import webhook_url_list
     from dateutil import parser
     from discord_webhook import DiscordEmbed, DiscordWebhook
 
-    avatar_url = get_avatar(channel_id())
+    avatar_url = get_avatar(video.username)
 
     for webhook_url in webhook_url_list():
         send_webhook(video, jpg, avatar_url, webhook_url)
+
+    print(f'Successfully sent Discord webhooks for "{video.title}"')
