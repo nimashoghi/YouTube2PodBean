@@ -134,6 +134,7 @@ def main():
     from app.detect import detect_videos, process_new_video
     from app.config import polling_rate, start_from, videos
     from app.webhooks import process_webhooks
+    from app.wordpress import post_video
 
     def video_found(video, title, description, mp3, jpg, new):
         from oauthlib.oauth2.rfc6749.errors import (
@@ -144,6 +145,7 @@ def main():
 
         if new:
             process_webhooks(video, jpg)
+            post_video(video)
 
         while True:
             try:

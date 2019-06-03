@@ -72,6 +72,12 @@
                     "items": {
                         "type": "string"
                     }
+                },
+                "TextMaxLength": {
+                    "title": "Maximum Description Length",
+                    "description": "Maximum length of YouTube video description before the description gets clipped off",
+                    "type": "number",
+                    "default": 100
                 }
             }
         },

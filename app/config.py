@@ -79,6 +79,7 @@ title_negative_pattern = config("YouTube:TitleNegativePattern", default="")
 videos = config("YouTube:CustomVideos", default=[])
 
 webhook_url_list = config("WebHook:UrlList", default=[])
+webhook_text_max_length = config("WebHook:TextMaxLength", default=100)
 
 wp_xmlrpc_url = config("WordPress:XmlRpcUrl", default="")
 wp_username = config("WordPress:Username", default="")

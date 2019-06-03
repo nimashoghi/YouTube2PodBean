@@ -18,7 +18,10 @@ def get_avatar(channel_id):
     return result["items"][0]["snippet"]["thumbnails"]["default"]["url"]
 
 
-def clip_text(text, length=128):
+def clip_text(text):
+    from app.config import webhook_text_max_length
+
+    length = webhook_text_max_length()
     return f"{text[:length]}..." if len(text) > length else text
 
 
