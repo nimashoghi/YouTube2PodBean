@@ -5,3 +5,4 @@ pickles/
 .vscode/
 .env
 .env.template
+settings.json
