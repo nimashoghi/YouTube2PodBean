@@ -14,6 +14,7 @@ discord_webhook = "^0.4.1"
 python-dateutil = "^2.8"
 colorthief = "^0.2.1"
 python-wordpress-xmlrpc = "^2.3"
+xmltodict = "^0.12.0"
 
 [tool.poetry.dev-dependencies]
 pylint = {version = "^2.3",allows-prereleases = true}

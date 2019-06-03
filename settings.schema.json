@@ -5,7 +5,7 @@
     "properties": {
         "Enabled": {
             "type": "boolean",
-            "title": "Enabled (Kill Switch)",
+            "title": "Application Enabled",
             "description": "Should the service start? Set this to off if you want to start the server but have it wait until you finish some configuration.",
             "default": true
         },

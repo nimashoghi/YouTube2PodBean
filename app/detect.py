@@ -72,22 +72,57 @@ def process_new_video(callback, new=False):
     return process
 
 
-def get_uploads_playlist_id():
+def get_upload_info():
     from app.config import channel_id
 
-    playlist_id = channel_id()
-    if playlist_id[1] == "C":
-        return f"{playlist_id[:1]}U{playlist_id[2:]}"
+    channel_id = channel_id()
+
+    if channel_id[1] == "C":
+        return channel_id, f"{channel_id[:1]}U{channel_id[2:]}"
     else:
-        return playlist_id
+        return None, channel_id
+
+
+def get_uploads_from_xml_feed(channel_id):
+    import pafy
+    import requests
+    from xmltodict import parse
+
+    entries = parse(
+        requests.get(
+            f"https://www.youtube.com/feeds/videos.xml",
+            params=dict(channel_id=channel_id),
+        ).text
+    )["feed"]["entry"]
+
+    return [pafy.new(entry["yt:videoId"]) for entry in entries]
+
+
+def get_all_uploads_updated():
+    import pafy
+    from collections import OrderedDict
+    from itertools import chain
+    from dateutil import parser
+
+    channel_id, playlist_id = get_upload_info()
+    playlist = pafy.get_playlist2(playlist_id)
+    xml_playlist = get_uploads_from_xml_feed(channel_id) if channel_id else []
+
+    return OrderedDict(
+        (video.videoid, video)
+        for video in sorted(
+            (video for video in chain(playlist, xml_playlist)),
+            key=lambda video: parser.parse(video.published),
+        )
+    ).values()
 
 
 def get_all_uploads(refetch_latest=0):
-    import pafy
     from itertools import islice
     from app.config import load_pickle, save_pickle, playlist_history_pickle_path
 
-    new_playlist = pafy.get_playlist2(get_uploads_playlist_id())
+    new_playlist = get_all_uploads_updated()
+
     saved_playlist = load_pickle(
         playlist_history_pickle_path(), lambda new_playlist=new_playlist: new_playlist
     )
