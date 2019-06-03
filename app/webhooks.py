@@ -53,6 +53,14 @@ def send_webhook(video, jpg, avatar_url, webhook_url):
 
 
 def process_webhooks(video, jpg):
+    from app.config import webhook_enabled
+
+    if not webhook_enabled():
+        print(
+            f'Discord WebHook posting not enabled. Skipping sending "{video.title}" to Discord.'
+        )
+        return
+
     from app.config import channel_id, webhook_url_list
     from dateutil import parser
     from discord_webhook import DiscordEmbed, DiscordWebhook

@@ -25,6 +25,12 @@
             "type": "object",
             "title": "YouTube Settings",
             "properties": {
+                "Enabled": {
+                    "title": "YouTube Polling Enabled",
+                    "description": "Should we poll the YouTube servers? Turning this off disables checking new YouTube videos (in other words, the app will not do anything).",
+                    "type": "boolean",
+                    "default": "false"
+                },
                 "ChannelId": {
                     "title": "Channel ID",
                     "description": "How to get your channel ID: https://www.youtube.com/watch?v=tUhIA3pIHSQ",
@@ -63,8 +69,14 @@
         },
         "WebHook": {
             "type": "object",
-            "title": "Web Hook Settings",
+            "title": "Discrord Web Hook Settings",
             "properties": {
+                "Enabled": {
+                    "title": "Discord Web Hook Posting Enabled",
+                    "description": "Should we post new YouTube videos to Discord?",
+                    "type": "boolean",
+                    "default": "false"
+                },
                 "UrlList": {
                     "title": "Web Hook URLs",
                     "description": "List of Discord webhook URLs to publish to. You can get Discord webhook URLs through the Discord channel settings: https://i.imgur.com/YDltDHJ.gifv",
@@ -85,6 +97,12 @@
             "type": "object",
             "title": "WordPress Settings",
             "properties": {
+                "Enabled": {
+                    "title": "WordPress Posting Enabled",
+                    "description": "Should we post new YouTube videos to WordPress?",
+                    "type": "boolean",
+                    "default": "false"
+                },
                 "XmlRpcUrl": {
                     "title": "XML RPC Gateway URL",
                     "description": "This should be http://your_wp_website/xmlrpc.php by default",

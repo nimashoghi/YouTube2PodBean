@@ -33,6 +33,14 @@ def process_description(description):
 
 
 def post_video(video):
+    from app.config import wp_enabled
+
+    if not wp_enabled():
+        print(
+            f'WordPress posting not enabled. Skipping sending "{video.title}" to WordPress.'
+        )
+        return None
+
     client = make_client()
 
     post = WordPressPost()

@@ -113,6 +113,12 @@ def check_start_from(videos, start_from):
 
 
 def detect_videos(f, new_only=True, start_from=None):
+    from app.config import youtube_enabled
+
+    if not youtube_enabled():
+        print("YouTube polling not enabled. Skipping current loop")
+        return
+
     from app.config import video_process_delay
     from time import sleep
 
