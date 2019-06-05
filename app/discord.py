@@ -1,13 +1,24 @@
-def color_tuple_to_int(tuple):
-    r, g, b = tuple
+from typing import Tuple
+
+from pafy.backend_youtube_dl import YtdlPafy
+
+from app.logging import create_logger
+
+logger, log = create_logger(__name__)
+
+
+def color_tuple_to_int(color: Tuple[float, float, float]) -> int:
+    red, green, blue = color
+
     return (
-        ((r & 0xFF) << (0x2 * 0x8))
-        | ((b & 0xFF) << (0x1 * 0x8))
-        | ((g & 0xFF) << (0x0 * 0x8))
+        ((red & 0xFF) << (0x2 * 0x8))
+        | ((green & 0xFF) << (0x1 * 0x8))
+        | ((blue & 0xFF) << (0x0 * 0x8))
     )
 
 
-def get_avatar(username):
+@log
+def get_avatar(username: str, *, logger=logger) -> str:
     from requests import get
     from pafy import g
 
@@ -15,21 +26,37 @@ def get_avatar(username):
         f"https://www.googleapis.com/youtube/v3/channels?part=snippet&fields=items%2Fsnippet%2Fthumbnails%2Fdefault&forUsername={username}&key={g.api_key}"
     ).json()
 
-    return result["items"][0]["snippet"]["thumbnails"]["default"]["url"]
+    try:
+        return result["items"][0]["snippet"]["thumbnails"]["default"]["url"]
+    except KeyError:
+        logger.warn(
+            f"Could not get the avatar for channel with username = '{username}'. Using default avatar"
+        )
+        from app.config import webhook_default_avatar
+
+        return webhook_default_avatar()
 
 
-def clip_text(text):
+@log
+def clip_text(text: str, *, logger=logger) -> str:
     from app.config import webhook_text_max_length
 
     length = webhook_text_max_length()
-    return f"{text[:length]}..." if len(text) > length else text
+    clipped_text = f"{text[:length]}..." if len(text) > length else text
+    logger.debug(f"Clipping text to '{clipped_text}'")
+    return clipped_text
 
 
-def send_webhook(video, jpg, avatar_url, webhook_url):
+@log
+def send_webhook(
+    video: YtdlPafy, jpg: str, avatar_url: str, webhook_url: str, *, logger=logger
+) -> None:
     from dateutil import parser
     from discord_webhook import DiscordEmbed, DiscordWebhook
     from datetime import datetime
     from colorthief import ColorThief
+
+    logger.info(f"Sending Discord webhook message for '{video.title}'")
 
     webhook = DiscordWebhook(url=webhook_url)
 
@@ -45,14 +72,13 @@ def send_webhook(video, jpg, avatar_url, webhook_url):
     )
     embed.set_timestamp(parser.parse(video.published).isoformat())
     embed.set_thumbnail(url=video.bigthumbhd, width=480, height=360)
-    # embed.set_image(url=video.bigthumbhd, width=480, height=360)
     embed.set_footer(text=f"Duration: {video.duration}")
 
     webhook.add_embed(embed)
     webhook.execute()
 
 
-def process_webhooks(video, jpg):
+def post_to_discord(video: YtdlPafy, jpg: str) -> None:
     from app.config import webhook_enabled
 
     if not webhook_enabled():

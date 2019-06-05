@@ -1,120 +1,118 @@
-def is_valid_title(title):
+import multiprocessing as mp
+from asyncio import Queue
+from typing import Callable, Iterable, List, Tuple, Union
+
+from pafy.backend_youtube_dl import YtdlPafy
+
+from app.logging import create_logger
+
+logger, log = create_logger(__name__)
+
+
+@log
+def is_valid_title(title, *, logger=logger):
     import re
     from app.config import title_pattern, title_negative_pattern
 
-    return re.search(title_pattern(), title, re.IGNORECASE) is not None and (
-        not title_negative_pattern()
-        or re.search(title_negative_pattern(), title, re.IGNORECASE) is None
-    )
+    title_pattern = title_pattern()
+    title_negative_pattern = title_negative_pattern()
+
+    if re.search(title_pattern(), title, re.IGNORECASE) is None:
+        logger.info(
+            f"'{title}' skipped because title doesn't match the include pattern."
+        )
+        return False
+    elif (
+        title_negative_pattern
+        and re.search(title_negative_pattern(), title, re.IGNORECASE) is not None
+    ):
+        logger.info(f"'{title}' skipped because title matches the skip pattern.")
+        return False
+    else:
+        logger.debug(f"'{title}' is a valid title.")
+        return True
 
 
-def sanitize_title(title):
-    return "".join(
-        [c for c in title if c.isalpha() or c.isdigit() or c == " "]
-    ).rstrip()
+@log
+def is_processed(video: YtdlPafy, *, logger=logger) -> bool:
+    from app.config import processed_pickle_path
+    from app.util import load_pickle, save_pickle
 
+    path = processed_pickle_path()
+    processed = load_pickle(path, get_default=lambda: set([]))
 
-def download_thumbnail(video):
-    from app.download import download_to_path
-
-    title = sanitize_title(video.title)
-    url = video.bigthumbhd if video.bigthumbhd else video.bigthumb
-
-    def get_url_extension(url, default="jpg"):
-        import re
-
-        match = re.search(url, r"\.(.+)\s*$")
-        return match[1] if match else default
-
-    print(f"Downloading thumbnail of '{title}' from {url}")
-
-    return download_to_path(url, f"/tmp/{title}.{get_url_extension(url)}")
-
-
-def download_youtube_audio(video):
-    from app.download import download_to_path
-
-    best = video.getbestaudio(preftype="m4a")
-
-    title = sanitize_title(video.title)
-    url = best.url
-
-    print(f"Downloading audio stream of '{title}' from {url}")
-
-    return download_to_path(url, f"/tmp/{title}.{best.extension}")
-
-
-def is_processed(video):
-    from app.config import processed_pickle_path, load_pickle, save_pickle
-
-    id = video.videoid
-    processed = load_pickle(processed_pickle_path(), get_default=lambda: set([]))
-    if id in processed:
+    if video.videoid in processed:
+        logger.debug(f"'{video.title}' is already processed.")
         return True
     else:
-        print(f"Added {id} to processed")
-
-        save_pickle(processed_pickle_path(), set([id, *processed]))
+        logger.info(f"Adding '{video.title}' to the processed video list.")
+        save_pickle(path, set([video.videoid, *processed]))
         return False
 
 
-def process_new_video(callback, new=False):
-    def process(video):
+def process_new_video(callback: Callable, **kwargs) -> Callable[[YtdlPafy], bool]:
+    def process(video: YtdlPafy):
+        from app.download import download_youtube_audio, download_thumbnail
+
         if is_processed(video):
             return False
 
         mp3_path = download_youtube_audio(video)
         thumbnail_path = download_thumbnail(video)
-        callback(video, video.title, video.description, mp3_path, thumbnail_path, new)
+        callback(video, mp3_path, thumbnail_path, **kwargs)
 
         return True
 
     return process
 
 
-def get_upload_info():
+def get_upload_info() -> Tuple[Union[str, None], str]:
     from app.config import channel_id
 
-    channel_id = channel_id()
+    channel_id_: str = channel_id()
 
-    if channel_id[1] == "C":
-        return channel_id, f"{channel_id[:1]}U{channel_id[2:]}"
+    if channel_id_[1] == "C":
+        return channel_id_, f"{channel_id_[:1]}U{channel_id_[2:]}"
     else:
-        return None, channel_id
+        return None, channel_id_
 
 
-def get_uploads_from_xml_feed(channel_id):
+@log
+def get_uploads_from_xml_feed(channel_id: str, *, logger=logger) -> List[YtdlPafy]:
     import pafy
     import requests
     from xmltodict import parse
 
-    entries = parse(
-        requests.get(
-            f"https://www.youtube.com/feeds/videos.xml",
-            params=dict(channel_id=channel_id),
-        ).text
-    )["feed"]["entry"]
-
-    return [pafy.new(entry["yt:videoId"]) for entry in entries]
+    xml = requests.get(
+        f"https://www.youtube.com/feeds/videos.xml", params=dict(channel_id=channel_id)
+    ).text
+    logger.debug(f"Received following XML from feed: {xml}")
+    return [pafy.new(entry["yt:videoId"]) for entry in parse(xml)["feed"]["entry"]]
 
 
-def get_all_uploads_updated():
+@log
+def get_all_uploads_updated(*, logger=logger) -> List[YtdlPafy]:
     import pafy
     from collections import OrderedDict
     from itertools import chain
     from dateutil import parser
 
     channel_id, playlist_id = get_upload_info()
+
     playlist = pafy.get_playlist2(playlist_id)
     xml_playlist = get_uploads_from_xml_feed(channel_id) if channel_id else []
 
-    return OrderedDict(
-        (video.videoid, video)
-        for video in sorted(
-            (video for video in chain(playlist, xml_playlist)),
-            key=lambda video: parser.parse(video.published),
-        )
-    ).values()
+    all_videos = list(
+        OrderedDict(
+            (video.videoid, video)
+            for video in sorted(
+                (video for video in chain(playlist, xml_playlist)),
+                key=lambda video: parser.parse(video.published),
+            )
+        ).values()
+    )
+    logger.debug(f"Most recent uploads: {[video.videoid for video in all_videos]}")
+    return all_videos
 
 
 def get_all_uploads(refetch_latest=0):
@@ -139,47 +137,63 @@ def get_all_uploads(refetch_latest=0):
     return new_items_in_playlist, saved_playlist
 
 
-def check_start_from(videos, start_from):
+@log
+def check_start_from(
+    videos: List[YtdlPafy], start_from: Union[YtdlPafy, None], *, logger=logger
+) -> Iterable[YtdlPafy]:
     if not start_from:
+        logger.debug("No start from set.")
         yield from videos
     else:
-        for item in videos:
-            yield item
-            if item.videoid == start_from:
-                print(
-                    f'Video start point detected. Checking videos up to "{item.title}"'
+        logger.debug(f"Start from set to '{start_from.title}'")
+        for video in videos:
+            yield video
+            if video.videoid == start_from.videoid:
+                logger.info(
+                    f'Video start point detected. Checking videos up to "{video.title}".'
                 )
                 break
 
 
-def detect_videos(f, new_only=True, start_from=None):
-    from app.config import youtube_enabled
-
-    if not youtube_enabled():
-        print("YouTube polling not enabled. Skipping current loop")
-        return
-
-    from app.config import video_process_delay
+@log
+def detect_videos(
+    f: Callable,
+    new_only=True,
+    start_from: Union[YtdlPafy, None] = None,
+    *,
+    logger=logger,
+) -> None:
+    from app.config import video_process_delay, youtube_enabled
     from time import sleep
 
-    if start_from:
-        print(f'Video start point detected. Checking videos up to "{start_from}"')
+    if not youtube_enabled():
+        logger.info("YouTube polling not enabled. Skipping current loop.")
+        return
 
     new_items, all_videos = get_all_uploads()
-    items = reversed(
+    videos = reversed(
         [
-            item
-            for item in check_start_from(
+            video
+            for video in check_start_from(
                 all_videos if not new_only else new_items, start_from
             )
-            if is_valid_title(item.title)
+            if is_valid_title(video.title)
         ]
     )
 
-    for item in items:
-        if not f(item):
+    for video in videos:
+        if not f(video):
             continue
 
         delay = video_process_delay()
-        print(f"Finished processing {item.title}. Waiting for {delay} seconds")
+        print(f"Finished processing {video.title}. Waiting for {delay} seconds")
         sleep(delay)
+
+
+async def detect_videos_loop(queue: Queue) -> None:
+    from asyncio import sleep
+    from app.config import polling_rate
+
+    while True:
+
+        await sleep(polling_rate())

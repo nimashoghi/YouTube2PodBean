@@ -1,26 +1,11 @@
-import pickle
 from functools import reduce
 from json import dump, load
 from os import environ
+from typing import Any, Callable, Union
 
+from app.logging import create_logger
 
-def load_pickle(path, get_default=None):
-    try:
-        with open(path, "rb") as f:
-            value = pickle.load(f)
-    except (OSError, IOError):
-        if get_default is None:
-            raise
-        value = get_default()
-        with open(path, "wb") as f:
-            pickle.dump(value, f)
-
-    return value
-
-
-def save_pickle(path, object):
-    with open(path, "wb") as f:
-        pickle.dump(object, f)
+logger, log = create_logger(__name__)
 
 
 def parse_config_value(value):
@@ -36,10 +21,15 @@ def parse_config_value(value):
     return value.replace(match[0], environ[env_variable_name])
 
 
-def config(config_name: str, default=None):
+@log
+def config(
+    config_name: str, default: Any = None, *, logger=logger
+) -> Callable[[], Any]:
     config_names = config_name.split(":")
 
-    def retrieve():
+    def retrieve() -> Any:
+        logger.debug(f"Trying to get the config value for setting '{config_name}'")
+
         from os import path
 
         settings_file = environ.get("SETTINGS_FILE", "settings.json")
@@ -55,9 +45,13 @@ def config(config_name: str, default=None):
             value = reduce(lambda acc, update: acc[update], config_names, json)
             if not value and default is not None:
                 value = default
+                logger.debug(f"Using default value for config = {value}")
+            else:
+                logger.debug(f"Got config value = {value}")
         except:
             if default is not None:
                 value = default
+                logger.debug(f"Using default value for config = {value}")
             else:
                 raise
         return parse_config_value(value)
@@ -65,10 +59,16 @@ def config(config_name: str, default=None):
     return retrieve
 
 
-def get_public_ip():
+@log
+def get_public_ip(*, logger=logger) -> str:
     from requests import get
 
-    return get("https://api.ipify.org").text
+    result = get("https://api.ipify.org")
+    if result.ok:
+        return result.text
+    else:
+        logger.warn("Failed to get public IP address. Using localhost instead.")
+        return "localhost"
 
 
 enabled = config("Enabled", default=False)
@@ -94,6 +94,7 @@ videos = config("YouTube:CustomVideos", default=[])
 webhook_enabled = config("WebHook:Enabled", default=False)
 webhook_url_list = config("WebHook:UrlList", default=[])
 webhook_text_max_length = config("WebHook:TextMaxLength", default=100)
+webhook_default_avatar = config("WebHook:DefaultAvatar", default="")
 
 wp_enabled = config("WordPress:Enabled", default=False)
 wp_xmlrpc_url = config("WordPress:XmlRpcUrl", default="")
