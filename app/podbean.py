@@ -13,15 +13,21 @@ def redirect_uri():
     return f"http://{public_host()}:{port()}"
 
 
+import asyncio
 import mimetypes
 import os.path
-from typing import Callable
+from typing import Any, Callable, Tuple
 
 import requests
+from pafy.backend_youtube_dl import YtdlPafy
 from requests_oauthlib import OAuth2Session
 
 from app.config import client_id, client_secret, port, public_host
+from app.logging import create_logger
 from app.server import get_oauth_code as get_oauth_code_from_server
+from app.sync import asyncify
+
+logger, log = create_logger(__name__)
 
 
 def authorize_upload(access_token: str, file_path: str):
@@ -52,7 +58,7 @@ def upload_file(file_path: str, presigned_url: str):
         raise Exception("Failed to upload")
 
 
-def publish_episode(
+async def publish_episode(
     access_token: str,
     title: str,
     description: str,
@@ -60,7 +66,7 @@ def publish_episode(
     thumbnail_file_key: str,
     status="publish",
     type="public",
-):
+) -> Any:
     response = requests.post(
         publish_episode_url,
         data=dict(
@@ -82,86 +88,115 @@ def publish_episode(
         raise e
 
 
-def upload_and_publish_episode(
-    access_token: str, title: str, description: str, file_path: str, thumbnail_path: str
-):
+async def authorize_and_upload(access_token: str, file_path: str) -> str:
+    presigned_url, file_key = await authorize_upload(access_token, file_path)
+    await upload_file(file_path, presigned_url)
+    return file_key
+
+
+async def upload_and_publish_episode(
+    access_token: str,
+    title: str,
+    description: str,
+    audio_path: str,
+    thumbnail_path: str,
+) -> Any:
     from app.config import podbean_enabled
 
     if not podbean_enabled():
         return
 
-    presigned_url, file_key = authorize_upload(access_token, file_path)
-    upload_file(file_path, presigned_url)
+    (audio_key, thumbnail_key, _), _ = await asyncio.wait(
+        {
+            authorize_and_upload(access_token, audio_path),
+            authorize_and_upload(access_token, thumbnail_path),
+        }
+    )
 
-    presigned_url, thumbnail_file_key = authorize_upload(access_token, thumbnail_path)
-    upload_file(thumbnail_path, presigned_url)
-
-    return publish_episode(
-        access_token, title, description, file_key, thumbnail_file_key
+    return await publish_episode(
+        access_token, title, description, audio_key.result(), thumbnail_key.result()
     )
 
 
-def refresh_access_token(oauth: OAuth2Session):
-    from app.config import access_code_pickle_path, load_pickle, save_pickle
+async def refresh_access_token(oauth: OAuth2Session) -> None:
+    from app.config import access_code_pickle_path
+    from app.util import load_pickle, save_pickle
 
-    token_info = load_pickle(access_code_pickle_path())
-    new_token_info = oauth.refresh_token(
-        token_url=token_url, refresh_token=token_info["refresh_token"]
-    )
+    @asyncify
+    def refresh_token(oauth: OAuth2Session, token_url, refresh_token=None) -> Any:
+        return oauth.refresh_token(token_url, refresh_token)
+
+    token_info = await load_pickle(access_code_pickle_path())
+    new_token_info = await refresh_token(oauth, token_url, token_info["refresh_token"])
     token_info.update(new_token_info)
     save_pickle(access_code_pickle_path(), token_info)
 
 
-def get_access_token(oauth: OAuth2Session):
-    from app.config import access_code_pickle_path, load_pickle
+async def get_access_token(oauth: OAuth2Session) -> str:
+    from app.config import access_code_pickle_path
+    from app.util import load_pickle
 
-    return load_pickle(access_code_pickle_path())["access_token"]
+    pickle = await load_pickle(access_code_pickle_path())
+    return pickle["access_token"]
 
 
-def ensure_has_oauth_token(oauth: OAuth2Session):
-    from app.config import access_code_pickle_path, load_pickle
+@log
+async def ensure_has_oauth_token(
+    oauth: OAuth2Session, *, logger=logger
+) -> OAuth2Session:
+    from app.config import access_code_pickle_path
+    from app.util import load_pickle
 
-    def first_time_auth():
-        authorization_url, _ = oauth.authorization_url(oauth_url)
-        print(f"Please visit the link below:\n{authorization_url}")
-        code = get_oauth_code_from_server()
+    @asyncify
+    def authorization_url(oauth: OAuth2Session, oauth_url: str) -> str:
+        return oauth.authorization_url(oauth_url)[0]
+
+    @asyncify
+    def fetch_token(
+        oauth: OAuth2Session,
+        token_url: str,
+        code: str,
+        client_id: str,
+        client_secret: str,
+    ) -> Any:
         return oauth.fetch_token(
             token_url=token_url,
             code=code,
-            client_id=client_id(),
-            client_secret=client_secret(),
+            client_id=client_id,
+            client_secret=client_secret,
         )
 
-    load_pickle(access_code_pickle_path(), get_default=first_time_auth)
+    async def first_time_auth() -> Any:
+        logger.info("Handling first time PodBean authentication")
 
+        print(
+            f"Please visit the link below:\n{await authorization_url(oauth, oauth_url)}"
+        )
+        code = await get_oauth_code_from_server()
+        return await fetch_token(oauth, token_url, code, client_id(), client_secret())
 
-def get_oauth():
-    import mimetypes
-    import os.path
-    from typing import Callable
-
-    import requests
-    from requests_oauthlib import OAuth2Session
-
-    from app.config import client_id, client_secret, port, public_host
-    from app.server import get_oauth_code as get_oauth_code_from_server
-
-    oauth = OAuth2Session(
-        client_id=client_id(), redirect_uri=redirect_uri(), scope=scope
-    )
-    ensure_has_oauth_token(oauth)
-
+    await load_pickle(access_code_pickle_path(), get_default=first_time_auth)
     return oauth
 
 
-async def post_to_podbean(title, description, mp3, jpg, oauth):
-    from os import remove
+async def initialize_oauth_session() -> OAuth2Session:
+    from app.config import client_id
 
-    from app.podbean import (
-        get_access_token,
-        refresh_access_token,
-        upload_and_publish_episode,
+    return await ensure_has_oauth_token(
+        OAuth2Session(client_id=client_id(), redirect_uri=redirect_uri(), scope=scope)
     )
+
+
+@log
+async def post_to_podbean(
+    video: YtdlPafy,
+    audio_path: str,
+    thumbnail_path: str,
+    oauth: OAuth2Session,
+    *,
+    logger=logger,
+) -> None:
+    from os import remove
 
     from oauthlib.oauth2.rfc6749.errors import (
         InvalidGrantError,
@@ -169,17 +204,21 @@ async def post_to_podbean(title, description, mp3, jpg, oauth):
         InvalidTokenError,
     )
 
+    logger.debug(f"Attempting to upload '{video.title}' to PodBean")
+
     while True:
         try:
-            access_token = get_access_token(oauth)
-
-            print(f"\nUploading {title}")
-            upload_and_publish_episode(
-                access_token, title, description, file_path=mp3, thumbnail_path=jpg
+            logger.info(f"\nUploading {video.title} to PodBean...")
+            await upload_and_publish_episode(
+                await get_access_token(oauth),
+                video.title,
+                video.description,
+                audio_path=audio_path,
+                thumbnail_path=thumbnail_path,
             )
-            remove(mp3)
-            remove(jpg)
-            print(f"Uploaded {title}")
+            remove(audio_path)
+            remove(thumbnail_path)
+            logger.info(f"\nUploaded {video.title} to PodBean")
             break
         except (InvalidGrantError, TokenExpiredError, InvalidTokenError):
             print("Token expired... refreshing")

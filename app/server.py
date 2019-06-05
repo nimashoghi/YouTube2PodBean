@@ -1,13 +1,20 @@
 from ctypes import c_char_p
-from multiprocessing import Manager, Process, set_start_method
+from multiprocessing import Manager, Process, Value, set_start_method
 from time import sleep
+from typing import Any
 
 from flask import Flask, request
 
+from app.logging import create_logger
+from app.sync import asyncify
+
 set_start_method("spawn", True)
 
+logger, log = create_logger(__name__)
 
-def run_app(code):
+
+@log
+def run_app(expected_code: Value, *, logger=logger) -> None:
     from app.config import host, port
 
     app = Flask("OAuthServer")
@@ -19,15 +26,19 @@ def run_app(code):
         if not request_code:
             return "Failed to authorize!"
 
-        code.value = request_code
+        expected_code.value = request_code
         return "Successfully authorized!"
 
-    app.run(host=host(), port=port())
+    app_host, app_port = host(), port()
+    logger.info(f"Started OAuth server at {app_host}:{app_port}")
+    app.run(host=app_host, port=app_port)
 
 
-def get_oauth_code():
+@asyncify
+def get_oauth_code() -> None:
     manager = Manager()
-    code = manager.Value(c_char_p, "")
+    code: Any = manager.Value(c_char_p, "")
+
     server = Process(target=run_app, args=(code,))
     server.start()
 

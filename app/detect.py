@@ -5,6 +5,7 @@ from typing import Callable, Iterable, List, Tuple, Union
 from pafy.backend_youtube_dl import YtdlPafy
 
 from app.logging import create_logger
+from app.util import fetch_text
 
 logger, log = create_logger(__name__)
 
@@ -34,36 +35,20 @@ def is_valid_title(title, *, logger=logger):
 
 
 @log
-def is_processed(video: YtdlPafy, *, logger=logger) -> bool:
+async def is_processed(video: YtdlPafy, *, logger=logger) -> bool:
     from app.config import processed_pickle_path
     from app.util import load_pickle, save_pickle
 
     path = processed_pickle_path()
-    processed = load_pickle(path, get_default=lambda: set([]))
+    processed = await load_pickle(path, get_default=lambda: set([]))
 
     if video.videoid in processed:
         logger.debug(f"'{video.title}' is already processed.")
         return True
     else:
         logger.info(f"Adding '{video.title}' to the processed video list.")
-        save_pickle(path, set([video.videoid, *processed]))
+        await save_pickle(path, set([video.videoid, *processed]))
         return False
-
-
-def process_new_video(callback: Callable, **kwargs) -> Callable[[YtdlPafy], bool]:
-    def process(video: YtdlPafy):
-        from app.download import download_youtube_audio, download_thumbnail
-
-        if is_processed(video):
-            return False
-
-        mp3_path = download_youtube_audio(video)
-        thumbnail_path = download_thumbnail(video)
-        callback(video, mp3_path, thumbnail_path, **kwargs)
-
-        return True
-
-    return process
 
 
 def get_upload_info() -> Tuple[Union[str, None], str]:
@@ -78,16 +63,17 @@ def get_upload_info() -> Tuple[Union[str, None], str]:
 
 
 @log
-def get_uploads_from_xml_feed(channel_id: str, *, logger=logger) -> List[YtdlPafy]:
+async def get_uploads_from_xml_feed(
+    channel_id: str, *, logger=logger
+) -> List[YtdlPafy]:
     import pafy
-    import requests
     from xmltodict import parse
 
-    xml = requests.get(
-        f"https://www.youtube.com/feeds/videos.xml", params=dict(channel_id=channel_id)
+    text = await fetch_text(
+        f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
     ).text
-    logger.debug(f"Received following XML from feed: {xml}")
-    return [pafy.new(entry["yt:videoId"]) for entry in parse(xml)["feed"]["entry"]]
+    logger.debug(f"Received following XML from feed: {text}")
+    return [pafy.new(entry["yt:videoId"]) for entry in parse(text)["feed"]["entry"]]
 
 
 @log
@@ -115,11 +101,12 @@ def get_all_uploads_updated(*, logger=logger) -> List[YtdlPafy]:
     return all_videos
 
 
-def get_all_uploads(refetch_latest=0):
+async def get_all_uploads(refetch_latest=0):
     from itertools import islice
-    from app.config import load_pickle, save_pickle, playlist_history_pickle_path
+    from app.config import playlist_history_pickle_path
+    from app.util import load_pickle, save_pickle
 
-    new_playlist = get_all_uploads_updated()
+    new_playlist = await get_all_uploads_updated()
 
     saved_playlist = load_pickle(
         playlist_history_pickle_path(), lambda new_playlist=new_playlist: new_playlist
@@ -153,6 +140,22 @@ def check_start_from(
                     f'Video start point detected. Checking videos up to "{video.title}".'
                 )
                 break
+
+
+@log
+def get_relevant_videos(
+    new_only=True, start_from: Union[str, None] = None, *, logger=logger
+):
+    new_items, all_videos = get_all_uploads()
+    return reversed(
+        [
+            video
+            for video in check_start_from(
+                all_videos if not new_only else new_items, start_from
+            )
+            if is_valid_title(video.title)
+        ]
+    )
 
 
 @log

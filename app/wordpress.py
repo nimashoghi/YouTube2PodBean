@@ -1,16 +1,19 @@
-import logging
+from typing import Union
 
+from pafy.backend_youtube_dl import YtdlPafy
 from wordpress_xmlrpc import Client, WordPressPost
 from wordpress_xmlrpc.methods import posts
 
-from app.logging import log
+from app.logging import create_logger
+from app.sync import asyncify
 
-logger = logging.getLogger(__name__)
+logger, log = create_logger(__name__)
 
 
-@log(logger)
-def make_client(*, logger=logger):
+@log
+def make_client(*, logger=logger) -> Client:
     from app.config import wp_password, wp_username, wp_xmlrpc_url
+    from wordpress_xmlrpc import Client
 
     username = wp_username()
     password = wp_password()
@@ -31,13 +34,13 @@ def make_client(*, logger=logger):
     return client
 
 
-def make_embed_code(video):
+def make_embed_code(video: YtdlPafy) -> str:
     from app.config import wp_embed_width, wp_embed_height
 
     return f"""<iframe width="{wp_embed_width()}" height="{wp_embed_height()}" src="https://www.youtube.com/embed/{video.videoid}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>"""
 
 
-def process_description(description):
+def process_description(description: str) -> str:
     def add_anchor_to_urls(text: str):
         import re
 
@@ -48,23 +51,33 @@ def process_description(description):
     return add_anchor_to_urls(description)
 
 
-def post_to_wordpress(video):
+@log
+@asyncify
+def post_msg(client: Client, title: str, content: str, *, logger=logger) -> str:
+    logger.debug("Creating and publishing WP post...")
+    post = WordPressPost()
+    post.title = title
+    post.content = content
+    post.post_status = "publish"
+    id = client.call(posts.NewPost(post))
+    logger.info(f'Successfully created WordPress post (ID {id}) for "{title}"')
+    return id
+
+
+@log
+async def post_to_wordpress(video: YtdlPafy, *, logger=logger) -> Union[str, None]:
     from app.config import wp_enabled
 
     if not wp_enabled():
-        print(
+        logger.info(
             f'WordPress posting not enabled. Skipping sending "{video.title}" to WordPress.'
         )
         return None
 
     client = make_client()
 
-    post = WordPressPost()
-    post.title = video.title
-    post.content = (
-        f"{make_embed_code(video)}<hr />{process_description(video.description)}"
+    return await post_msg(
+        client,
+        video.title,
+        f"{make_embed_code(video)}<hr />{process_description(video.description)}",
     )
-    post.post_status = "publish"
-
-    id = client.call(posts.NewPost(post))
-    print(f'Successfully created WordPress post (ID = {id}) for "{video.title}"')

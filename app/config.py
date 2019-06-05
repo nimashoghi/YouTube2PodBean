@@ -48,7 +48,7 @@ def config(
                 logger.debug(f"Using default value for config = {value}")
             else:
                 logger.debug(f"Got config value = {value}")
-        except:
+        except Exception:
             if default is not None:
                 value = default
                 logger.debug(f"Using default value for config = {value}")

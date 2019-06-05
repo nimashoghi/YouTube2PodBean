@@ -1,63 +1,90 @@
-async def video_found(video, title, description, mp3, jpg, *, new, oauth):
+import asyncio
+from typing import AsyncIterable
+
+import pafy
+from pafy.backend_youtube_dl import YtdlPafy
+from requests_oauthlib import OAuth2Session
+
+from app.logging import create_logger
+from app.podbean import initialize_oauth_session
+
+logger, log = create_logger(__name__)
+
+
+async def process_video(video: YtdlPafy, *, new: bool, oauth: OAuth2Session) -> None:
+    from app.download import download_video
     from app.discord import post_to_discord
     from app.wordpress import post_to_wordpress
     from app.podbean import post_to_podbean
 
+    audio_path, thumbnail_path = await download_video(video)
+
+    tasks = []
+
     if new:
-        post_to_discord(video, jpg)
-        post_to_wordpress(video)
+        tasks.append(asyncio.create_task(post_to_discord(video, thumbnail_path)))
+        tasks.append(asyncio.create_task(post_to_wordpress(video)))
 
-    post_to_podbean(title, description, mp3, jpg, oauth)
-
-
-async def main():
-    from app.config import enabled
-    from time import sleep
-
-    while not enabled():
-        print(
-            "Application is not enabled (kill switch)... Checking again in 5 seconds."
-        )
-        sleep(5.0)
-
-    from app.podbean import (
-        get_access_token,
-        get_oauth,
-        refresh_access_token,
-        upload_and_publish_episode,
+    tasks.append(
+        asyncio.create_task(post_to_podbean(video, audio_path, thumbnail_path, oauth))
     )
 
-    oauth = get_oauth()
+    await asyncio.wait(tasks)
 
-    process_video_callback = process_new_video(video_found, new=False)
-    process_new_video_callback = process_new_video(video_found, new=True)
 
-    print("Processing all videos...")
-    detect_videos(process_video_callback, new_only=False, start_from=start_from())
+queue: asyncio.Queue = asyncio.Queue()
+
+
+async def get_videos() -> AsyncIterable[YtdlPafy]:
+    global queue
 
     while True:
-        print("------------------------")
-        print()
+        yield await queue.get()
 
-        print("Processing manual videos...")
-        for id in videos():
-            process_video_callback(pafy.new(id))
 
-        print("Processing new videos...")
-        detect_videos(process_new_video_callback, start_from=start_from())
+async def get_custom_videos() -> AsyncIterable[YtdlPafy]:
+    from app.config import videos
 
-        print()
-        print("------------------------")
-        sleep(polling_rate())
+    for id in videos():
+        yield pafy.new(id)
+
+
+@log
+async def custom_video_processor(oauth: OAuth2Session, *, logger=logger):
+    while True:
+        async for video in get_custom_videos():
+            await process_video(video)
+        await asyncio.sleep(5.0)
+
+
+@log
+async def youtube_poller(*, logger=logger):
+    return
+
+
+@log
+async def video_processor(oauth: OAuth2Session, *, logger=logger):
+    async for video in get_videos():
+        await process_video(video)
+
+
+@log
+async def main(*, logger=logger):
+    from app.config import enabled
+
+    while not enabled():
+        logger.critical("Application is not enabled... Checking again in 5 seconds.")
+        await asyncio.sleep(5.0)
+
+    oauth = await initialize_oauth_session()
 
 
 if __name__ == "__main__":
     import logging
-    from asyncio import run
     from multiprocessing import freeze_support
 
     logging.basicConfig(level=logging.INFO)
 
     freeze_support()
 
-    run(main())
+    asyncio.run(main())

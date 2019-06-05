@@ -1,10 +1,13 @@
+import asyncio
 import os
+from typing import Tuple
 
 import youtube_dl
 from pafy import g
 from pafy.backend_youtube_dl import YtdlPafy
 
 from app.logging import create_logger
+from app.sync import asyncify
 
 logger, log = create_logger(__name__)
 
@@ -29,6 +32,7 @@ class ydl:
         pass
 
 
+@asyncify
 def download_to_path(url, path):
     downloader = youtube_dl.downloader.http.HttpFD(
         ydl(), {"http_chunk_size": 10_485_760}
@@ -40,7 +44,7 @@ def download_to_path(url, path):
 
 
 @log
-def download_thumbnail(video: YtdlPafy, *, logger=logger) -> str:
+async def download_thumbnail(video: YtdlPafy, *, logger=logger) -> str:
     from app.download import download_to_path
     from app.util import sanitize_title
 
@@ -53,12 +57,13 @@ def download_thumbnail(video: YtdlPafy, *, logger=logger) -> str:
         match = re.search(url, r"\.(.+)\s*$")
         return match[1] if match else default
 
-    path = download_to_path(url, f"/tmp/{title}.{get_url_extension(url)}")
+    path = await download_to_path(url, f"/tmp/{title}.{get_url_extension(url)}")
     logger.info(f"Downloading thumbnail for '{title}' from '{url}' into '{path}'")
     return path
 
 
-def download_youtube_audio(video: YtdlPafy, *, logger=logger) -> str:
+@log
+async def download_audio(video: YtdlPafy, *, logger=logger) -> str:
     from app.download import download_to_path
     from app.util import sanitize_title
 
@@ -67,6 +72,15 @@ def download_youtube_audio(video: YtdlPafy, *, logger=logger) -> str:
     title = sanitize_title(video.title)
     url = best.url
 
-    path = download_to_path(url, f"/tmp/{title}.{best.extension}")
+    path = await download_to_path(url, f"/tmp/{title}.{best.extension}")
     logger.info(f"Downloading audio for '{title}' from '{url}' into '{path}'")
     return path
+
+
+@log
+async def download_video(video: YtdlPafy, *, logger=logger) -> Tuple[str, str]:
+    (audio, thumbnail), _ = await asyncio.wait(
+        {download_audio(video), download_thumbnail(video)}
+    )
+
+    return (audio.result(), thumbnail.result())

@@ -1,36 +1,28 @@
+import asyncio
 from typing import Tuple
 
+import aiohttp
 from pafy.backend_youtube_dl import YtdlPafy
 
 from app.logging import create_logger
+from app.sync import asyncify
 
 logger, log = create_logger(__name__)
 
 
-def color_tuple_to_int(color: Tuple[float, float, float]) -> int:
-    red, green, blue = color
-
-    return (
-        ((red & 0xFF) << (0x2 * 0x8))
-        | ((green & 0xFF) << (0x1 * 0x8))
-        | ((blue & 0xFF) << (0x0 * 0x8))
-    )
-
-
 @log
-def get_avatar(username: str, *, logger=logger) -> str:
-    from requests import get
+async def get_avatar(username: str, *, logger=logger) -> str:
     from pafy import g
+    from app.util import fetch_json
 
-    result = get(
-        f"https://www.googleapis.com/youtube/v3/channels?part=snippet&fields=items%2Fsnippet%2Fthumbnails%2Fdefault&forUsername={username}&key={g.api_key}"
-    ).json()
+    url = f"https://www.googleapis.com/youtube/v3/channels?part=snippet&fields=items%2Fsnippet%2Fthumbnails%2Fdefault&forUsername={username}&key={g.api_key}"
 
+    result = await fetch_json(url)
     try:
         return result["items"][0]["snippet"]["thumbnails"]["default"]["url"]
     except KeyError:
         logger.warn(
-            f"Could not get the avatar for channel with username = '{username}'. Using default avatar"
+            f"Could not get the avatar for channel '{username}'. Using default avatar."
         )
         from app.config import webhook_default_avatar
 
@@ -43,18 +35,20 @@ def clip_text(text: str, *, logger=logger) -> str:
 
     length = webhook_text_max_length()
     clipped_text = f"{text[:length]}..." if len(text) > length else text
-    logger.debug(f"Clipping text to '{clipped_text}'")
+    if clipped_text != text:
+        logger.debug(f"Clipping text to '{clipped_text}'")
     return clipped_text
 
 
+@asyncify
 @log
 def send_webhook(
     video: YtdlPafy, jpg: str, avatar_url: str, webhook_url: str, *, logger=logger
 ) -> None:
     from dateutil import parser
     from discord_webhook import DiscordEmbed, DiscordWebhook
-    from datetime import datetime
     from colorthief import ColorThief
+    from app.util import color_tuple_to_int
 
     logger.info(f"Sending Discord webhook message for '{video.title}'")
 
@@ -78,22 +72,23 @@ def send_webhook(
     webhook.execute()
 
 
-def post_to_discord(video: YtdlPafy, jpg: str) -> None:
-    from app.config import webhook_enabled
+@log
+async def post_to_discord(video: YtdlPafy, jpg: str, *, logger=logger) -> None:
+    from app.config import webhook_enabled, webhook_url_list
 
     if not webhook_enabled():
-        print(
+        logger.info(
             f'Discord WebHook posting not enabled. Skipping sending "{video.title}" to Discord.'
         )
         return
 
-    from app.config import webhook_url_list
-    from dateutil import parser
-    from discord_webhook import DiscordEmbed, DiscordWebhook
+    avatar_url = await get_avatar(video.username)
 
-    avatar_url = get_avatar(video.username)
+    await asyncio.wait(
+        {
+            asyncio.create_task(send_webhook(video, jpg, avatar_url, webhook_url))
+            for webhook_url in webhook_url_list()
+        }
+    )
 
-    for webhook_url in webhook_url_list():
-        send_webhook(video, jpg, avatar_url, webhook_url)
-
-    print(f'Successfully sent Discord webhooks for "{video.title}"')
+    logger.info(f'Successfully sent Discord webhooks for "{video.title}"')
