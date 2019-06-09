@@ -1,9 +1,11 @@
+import re
 from typing import Union
 
 from pafy.backend_youtube_dl import YtdlPafy
 from wordpress_xmlrpc import Client, WordPressPost
 from wordpress_xmlrpc.methods import posts
 
+from app.constants import URL_REGEX
 from app.logging import create_logger
 from app.sync import asyncify
 
@@ -13,7 +15,6 @@ logger, log = create_logger(__name__)
 @log
 def make_client(*, logger=logger) -> Client:
     from app.config import wp_password, wp_username, wp_xmlrpc_url
-    from wordpress_xmlrpc import Client
 
     username = wp_username()
     password = wp_password()
@@ -42,10 +43,6 @@ def make_embed_code(video: YtdlPafy) -> str:
 
 def process_description(description: str) -> str:
     def add_anchor_to_urls(text: str):
-        import re
-
-        from app.constants import URL_REGEX
-
         return re.sub(URL_REGEX, r'<a href="\1">\1</a>', text)
 
     return add_anchor_to_urls(description)

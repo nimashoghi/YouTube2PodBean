@@ -21,7 +21,6 @@ aiohttp = "^3.5"
 pylint = {version = "^2.3",allows-prereleases = true}
 black = {version = "^18.3-alpha.0",allows-prereleases = true}
 bandit = "^1.6"
-flake8 = "^3.7"
 mypy = "^0.701.0"
 
 [build-system]

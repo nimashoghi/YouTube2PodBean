@@ -1,3 +1,4 @@
+import re
 from functools import reduce
 from json import dump, load
 from os import environ
@@ -8,11 +9,9 @@ from app.logging import create_logger
 logger, log = create_logger(__name__)
 
 
-def parse_config_value(value):
+def parse_config_value(value: Any) -> Any:
     if not isinstance(value, str):
         return value
-
-    import re
 
     match = re.search(r"^\s*\$env:(\w+)\s*$", value)
     if not match:
