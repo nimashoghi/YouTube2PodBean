@@ -4,5 +4,9 @@
     "service": "youtube2podbean",
     "workspaceFolder": "/workspace",
     "shutdownAction": "stopCompose",
-    "extensions": ["ms-python.python", "visualstudioexptteam.vscodeintellicode"]
+    "extensions": [
+        "ms-python.python",
+        "visualstudioexptteam.vscodeintellicode",
+        "njpwerner.autodocstring"
+    ]
 }

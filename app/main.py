@@ -8,11 +8,9 @@ from typing import Callable
 
 import pafy
 import requests
-from oauthlib.oauth2.rfc6749.errors import (
-    InvalidGrantError,
-    InvalidTokenError,
-    TokenExpiredError,
-)
+from oauthlib.oauth2.rfc6749.errors import (InvalidGrantError,
+                                            InvalidTokenError,
+                                            TokenExpiredError)
 from requests_oauthlib import OAuth2Session
 
 from app.detect import detect_videos, process_new_video
@@ -151,31 +149,42 @@ def upload_and_publish_episode(
     )
 
 
-def refresh_access_token(oauth: OAuth2Session):
-    from app.config import access_code_pickle_path
-
-    token_info = load_pickle(access_code_pickle_path())
-    new_token_info = oauth.refresh_token(
-        token_url=token_url, refresh_token=token_info["refresh_token"]
-    )
-    new_token_info["expires_at"] = (
-        datetime.timestamp(datetime.now()) + new_token_info["expires_in"]
-    )
-    token_info.update(new_token_info)
-    save_pickle(access_code_pickle_path(), token_info)
-    return token_info
-
-
 def get_access_token(oauth: OAuth2Session):
-    from app.config import access_code_pickle_path
+    """Tries to get the saved access token and refreshes it if it's expired.
 
-    token_info = load_pickle(access_code_pickle_path())
+    Arguments:
+        oauth {OAuth2Session} -- OAuth client
+
+    Returns:
+        str -- the access token
+    """
+    from app.config import access_code_pickle_path, client_id, client_secret
+
+    pickle_path = access_code_pickle_path()
+
+    token_info = load_pickle(pickle_path)
     expires_at = datetime.fromtimestamp(token_info["expires_at"])
+    logging.debug(
+        f"Saved access token in access_code.pickle expires at '{expires_at}'."
+    )
     if expires_at <= datetime.now():
         logging.info(
             f"Stored access token has expired '{token_info['access_token']}'. Refreshing with refresh token '{token_info['refresh_token']}'..."
         )
-        token_info = refresh_access_token(oauth)
+
+        # refresh the token
+        new_token_info = oauth.refresh_token(
+            token_url=token_url,
+            refresh_token=token_info["refresh_token"],
+            auth=(client_id(), client_secret()),
+        )
+        new_token_info["expires_at"] = (
+            datetime.timestamp(datetime.now()) + new_token_info["expires_in"]
+        )
+        token_info.update(new_token_info)
+
+        # save info into pickle
+        save_pickle(pickle_path, token_info)
     else:
         logging.debug(f"Access token is not expired.")
 
@@ -188,14 +197,18 @@ def ensure_has_oauth_token(oauth: OAuth2Session):
     def first_time_auth():
         from app.config import client_id, client_secret
 
+        id = client_id()
+        secret = client_secret()
+
         authorization_url, _ = oauth.authorization_url(oauth_url)
         logging.critical(f"Please visit the link below:\n{authorization_url}")
         code = get_oauth_code_from_server()
         return oauth.fetch_token(
             token_url=token_url,
             code=code,
-            client_id=client_id(),
-            client_secret=client_secret(),
+            auth=(id, secret),
+            client_id=id,
+            client_secret=secret,
         )
 
     load_pickle(access_code_pickle_path(), get_default=first_time_auth)

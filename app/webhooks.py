@@ -32,6 +32,7 @@ def get_avatar(username_or_channel_id: str):
         channel_id = None
         channel_info: dict = {}
 
+        # channel ids start w/ UC and have 24 chars
         if len(username_or_channel_id) == 24 and username_or_channel_id.startswith(
             "UC"
         ):
