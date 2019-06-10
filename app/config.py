@@ -6,7 +6,7 @@ from functools import reduce
 import requests
 
 
-def parse_config_value(value):
+def parse_config_value(value: str) -> str:
     if not isinstance(value, str):
         return value
 
@@ -46,7 +46,7 @@ def config(config_name: str, default=None):
     return retrieve
 
 
-def get_public_ip():
+def get_public_ip() -> str:
     return requests.get("https://api.ipify.org").text
 
 
@@ -73,6 +73,7 @@ videos = config("YouTube:CustomVideos", default=[])
 webhook_enabled = config("WebHook:Enabled", default=False)
 webhook_url_list = config("WebHook:UrlList", default=[])
 webhook_text_max_length = config("WebHook:TextMaxLength", default=100)
+webhook_default_avatar = config("WebHook:DefaultAvatarUrl", default="https://i.imgur.com/eYw9nVR.jpg")
 
 wp_enabled = config("WordPress:Enabled", default=False)
 wp_xmlrpc_url = config("WordPress:XmlRpcUrl", default="")

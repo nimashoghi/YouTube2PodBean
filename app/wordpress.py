@@ -1,3 +1,4 @@
+import logging
 import re
 
 import wordpress_xmlrpc as xmlrpc
@@ -9,7 +10,12 @@ def make_client():
     from app.config import wp_password, wp_username, wp_xmlrpc_url
 
     if not wp_username() or not wp_password() or not wp_xmlrpc_url():
+        logging.critical(
+            f"Incomplete or invalid WP XMLRPC information set. Skipping uploading to WordPress."
+        )
         return None
+    else:
+        logging.debug("Creating WordPress client...")
 
     return xmlrpc.Client(wp_xmlrpc_url(), wp_username(), wp_password())
 
@@ -32,7 +38,7 @@ def post_video(video):
     from app.config import wp_enabled
 
     if not wp_enabled():
-        print(
+        logging.info(
             f'WordPress posting not enabled. Skipping sending "{video.title}" to WordPress.'
         )
         return None
@@ -47,4 +53,6 @@ def post_video(video):
     post.post_status = "publish"
 
     id = client.call(xmlrpc.methods.posts.NewPost(post))
-    print(f'Successfully created WordPress post (ID = {id}) for "{video.title}"')
+    logging.info(
+        f"Successfully created WordPress post with '{id}' for video '{video.title}'"
+    )

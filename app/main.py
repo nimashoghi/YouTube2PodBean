@@ -1,3 +1,4 @@
+import logging
 import mimetypes
 import multiprocessing as mp
 import os
@@ -6,6 +7,9 @@ from typing import Callable
 
 import pafy
 import requests
+from oauthlib.oauth2.rfc6749.errors import (InvalidGrantError,
+                                            InvalidTokenError,
+                                            TokenExpiredError)
 from requests_oauthlib import OAuth2Session
 
 from app.config import client_id, client_secret, port, public_host
@@ -31,7 +35,7 @@ def authorize_upload(access_token: str, file_path: str):
         params=dict(
             access_token=access_token,
             filename=os.path.basename(file_path),
-            filesize=os.path.getsize(file_path),
+            filesize=str(os.path.getsize(file_path)),
             content_type=mimetypes.guess_type(file_path)[0] or "audio/mpeg",
         ),
     ).json()
@@ -39,7 +43,7 @@ def authorize_upload(access_token: str, file_path: str):
     try:
         return result["presigned_url"], result["file_key"]
     except BaseException as e:
-        print(f"Failed to authoriez upload: {result}")
+        logging.error(f"Failed to authorize upload: {result}")
         raise e
 
 
@@ -50,7 +54,12 @@ def upload_file(file_path: str, presigned_url: str):
         data=open(file_path, "rb"),
     )
     if not r.ok:
-        raise Exception("Failed to upload")
+        logging.error(
+            f"Failed to upload file located at '{file_path}'. Presigned url = '{presigned_url}'"
+        )
+        raise Exception(
+            f"Failed to upload file located at '{file_path}'. Presigned url = '{presigned_url}'"
+        )
 
 
 def publish_episode(
@@ -62,6 +71,10 @@ def publish_episode(
     status="publish",
     type="public",
 ):
+    logging.debug(
+        f"Attempting to publish episode '{title}' with file_key='{file_key}' and thumbnail_file_key='{thumbnail_file_key}'."
+    )
+
     response = requests.post(
         publish_episode_url,
         data=dict(
@@ -74,26 +87,48 @@ def publish_episode(
             logo_key=thumbnail_file_key,
         ),
     )
+    if not response.ok:
+        logging.error(
+            f"Got an invalid status code from PodBean API servers while trying to publish episdoe '{title}'. status_code={response.status_code}. text={response.text}."
+        )
+        return
+
     result = response.json()
 
     try:
-        return result["episode"]
+        episode = result["episode"]
     except BaseException as e:
-        print(f"Failed to publish episode: {result}")
+        logging.error(
+            f"Failed to publish episode '{title}' with file_key='{file_key}' and thumbnail_file_key='{thumbnail_file_key}'. JSON response: {result}."
+        )
         raise e
+    else:
+        logging.debug(
+            f"Successfully published '{title}' with file_key='{file_key}' and thumbnail_file_key='{thumbnail_file_key}'."
+        )
+        return episode
 
 
 def upload_and_publish_episode(
-    access_token: str, title: str, description: str, file_path: str, thumbnail_path: str
+    access_token: str,
+    title: str,
+    description: str,
+    video_path: str,
+    thumbnail_path: str,
 ):
     from app.config import podbean_enabled
 
+    logging.debug(f"Attempting to upload and publish episode '{title}'.")
+
     if not podbean_enabled():
+        logging.info(f"PodBean upload not enabled. Skipping uploading '{title}'.")
         return
 
-    presigned_url, file_key = authorize_upload(access_token, file_path)
-    upload_file(file_path, presigned_url)
+    logging.debug(f"Uploading video for '{title}' located at '{video_path}'.")
+    presigned_url, file_key = authorize_upload(access_token, video_path)
+    upload_file(video_path, presigned_url)
 
+    logging.debug(f"Uploading thumbnail for '{title}' located at '{thumbnail_path}'.")
     presigned_url, thumbnail_file_key = authorize_upload(access_token, thumbnail_path)
     upload_file(thumbnail_path, presigned_url)
 
@@ -124,7 +159,7 @@ def ensure_has_oauth_token(oauth: OAuth2Session):
 
     def first_time_auth():
         authorization_url, _ = oauth.authorization_url(oauth_url)
-        print(f"Please visit the link below:\n{authorization_url}")
+        logging.critical(f"Please visit the link below:\n{authorization_url}")
         code = get_oauth_code_from_server()
         return oauth.fetch_token(
             token_url=token_url,
@@ -140,7 +175,7 @@ def main():
     from app.config import enabled, polling_rate, start_from, videos
 
     while not enabled():
-        print(
+        logging.critical(
             "Application is not enabled (kill switch)... Checking again in 5 seconds."
         )
         time.sleep(5.0)
@@ -149,12 +184,6 @@ def main():
     ensure_has_oauth_token(oauth)
 
     def video_found(video, title, description, mp3, jpg, new, mark_as_processed):
-        from oauthlib.oauth2.rfc6749.errors import (
-            InvalidGrantError,
-            TokenExpiredError,
-            InvalidTokenError,
-        )
-
         if new:
             process_webhooks(video, jpg)
             post_video(video)
@@ -162,43 +191,57 @@ def main():
         while True:
             try:
                 access_token = get_access_token(oauth)
-                print(f"\nUploading {title}")
+                logging.debug(f"PodBean access token is {access_token}.")
+
+                logging.info(f"Uploading '{title}' to PodBean...")
                 upload_and_publish_episode(
-                    access_token, title, description, file_path=mp3, thumbnail_path=jpg
+                    access_token, title, description, video_path=mp3, thumbnail_path=jpg
                 )
+                logging.info(f"Successfully uploaded '{title}' to PodBean...")
+
+                logging.debug(f"Removing '{mp3}'")
+                logging.debug(f"Removing '{jpg}'")
                 os.remove(mp3)
                 os.remove(jpg)
-                print(f"Uploaded {title}")
+                logging.info(
+                    f"Removed mp3 and jpg files for '{title}' from tmp directory..."
+                )
             except (InvalidGrantError, TokenExpiredError, InvalidTokenError):
-                print("Token expired... refreshing")
+                logging.info(
+                    f"Token expired while trying to upload {video.id}... refreshing"
+                )
                 refresh_access_token(oauth)
             else:
                 mark_as_processed()
+                logging.debug(
+                    f"Marked '{video}' as successfully processed so we don't check it again."
+                )
                 break
 
     process_video_callback = process_new_video(video_found, new=False)
     process_new_video_callback = process_new_video(video_found, new=True)
 
-    print("Processing all videos...")
-    detect_videos(process_video_callback, new_only=False, start_from=start_from())
+    start_from_all = start_from()
+    logging.info(f"Processing all videos, starting from {start_from_all}...")
+    detect_videos(process_video_callback, new_only=False, start_from=start_from_all)
 
     while True:
-        print("------------------------")
-        print()
-
-        print("Processing manual videos...")
+        logging.info("Processing manual videos...")
         for id in videos():
+            logging.info(f"Processing '{id}'")
             process_video_callback(pafy.new(id))
 
-        print("Processing new videos...")
-        detect_videos(process_new_video_callback, start_from=start_from())
+        start_from_new = start_from()
+        logging.info(f"Processing new videos, start from {start_from_new}...")
+        detect_videos(process_new_video_callback, start_from=start_from_new)
 
-        print()
-        print("------------------------")
-        time.sleep(polling_rate())
+        wait_time = polling_rate()
+        logging.debug(f"Waiting for {wait_time} seconds until next iteration.")
+        time.sleep(wait_time)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
     mp.freeze_support()
 
     main()

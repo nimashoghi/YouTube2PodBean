@@ -1,3 +1,4 @@
+import logging
 import re
 import tempfile
 import time
@@ -31,7 +32,9 @@ def download_thumbnail(video, title):
         match = re.search(url, r"\.(.+)\s*$")
         return match[1] if match else default
 
-    print(f"Downloading thumbnail of '{title}' from {url}")
+    logging.info(
+        f"Downloading thumbnail of '{video.title}' (sanitizied = '{title}') from {url}"
+    )
 
     _, path = tempfile.mkstemp(prefix=title, suffix=f".{get_url_extension(url)}")
     return download_to_path(url, path)
@@ -40,7 +43,9 @@ def download_thumbnail(video, title):
 def download_youtube_audio(video, title):
     best = video.getbestaudio(preftype="m4a")
 
-    print(f"Downloading audio stream of '{title}' from {best.url}")
+    logging.info(
+        f"Downloading audio stream of '{video.title}' (sanitizied = '{title}') from {best.url}"
+    )
 
     _, path = tempfile.mkstemp(prefix=title, suffix=f".{best.extension}")
     return download_to_path(best.url, path)
@@ -49,10 +54,10 @@ def download_youtube_audio(video, title):
 def mark_as_processed(video):
     from app.config import processed_pickle_path
 
-    print(f"Added {id} to processed")
-
     processed = load_pickle(processed_pickle_path(), get_default=lambda: set([]))
     save_pickle(processed_pickle_path(), set([video.videoid, *processed]))
+
+    logging.info(f"Added '{video.title}' to list of processed videos.")
 
 
 def is_processed(video):
@@ -148,12 +153,10 @@ def check_start_from(videos, start_from):
     if not start_from:
         yield from videos
     else:
-        for item in videos:
-            yield item
-            if item.videoid == start_from:
-                print(
-                    f'Video start point detected. Checking videos up to "{item.title}"'
-                )
+        for video in videos:
+            yield video
+            if video.videoid == start_from:
+                logging.info(f"Video start point set to '{video.title}'")
                 break
 
 
@@ -161,27 +164,26 @@ def detect_videos(f, new_only=True, start_from=None):
     from app.config import video_process_delay, youtube_enabled
 
     if not youtube_enabled():
-        print("YouTube polling not enabled. Skipping current loop")
+        logging.info("YouTube polling not enabled. Skipping current loop")
         return
 
-    if start_from:
-        print(f'Video start point detected. Checking videos up to "{start_from}"')
-
-    new_items, all_videos = get_all_uploads()
-    items = reversed(
+    new_vidoes, all_videos = get_all_uploads()
+    videos = reversed(
         [
-            item
-            for item in check_start_from(
-                all_videos if not new_only else new_items, start_from
+            video
+            for video in check_start_from(
+                all_videos if not new_only else new_vidoes, start_from
             )
-            if is_valid_title(item.title)
+            if is_valid_title(video.title)
         ]
     )
 
-    for item in items:
-        if not f(item):
+    for video in videos:
+        if not f(video):
             continue
 
         delay = video_process_delay()
-        print(f"Finished processing {item.title}. Waiting for {delay} seconds")
+        logging.info(
+            f"Finished processing {video.title}. Waiting for {delay} seconds before processing next video."
+        )
         time.sleep(delay)
