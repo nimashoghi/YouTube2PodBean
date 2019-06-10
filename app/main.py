@@ -1,12 +1,19 @@
 import mimetypes
-import os.path
+import multiprocessing as mp
+import os
+from time import sleep
 from typing import Callable
 
+import pafy
 import requests
 from requests_oauthlib import OAuth2Session
 
 from app.config import client_id, client_secret, port, public_host
+from app.detect import detect_videos, process_new_video
 from app.server import get_oauth_code as get_oauth_code_from_server
+from app.util import load_pickle, save_pickle
+from app.webhooks import process_webhooks
+from app.wordpress import post_video
 
 redirect_uri = f"http://{public_host()}:{port()}"
 scope = ["podcast_read", "podcast_update", "episode_read", "episode_publish"]
@@ -96,7 +103,7 @@ def upload_and_publish_episode(
 
 
 def refresh_access_token(oauth: OAuth2Session):
-    from app.config import access_code_pickle_path, load_pickle, save_pickle
+    from app.config import access_code_pickle_path
 
     token_info = load_pickle(access_code_pickle_path())
     new_token_info = oauth.refresh_token(
@@ -107,13 +114,13 @@ def refresh_access_token(oauth: OAuth2Session):
 
 
 def get_access_token(oauth: OAuth2Session):
-    from app.config import access_code_pickle_path, load_pickle
+    from app.config import access_code_pickle_path
 
     return load_pickle(access_code_pickle_path())["access_token"]
 
 
 def ensure_has_oauth_token(oauth: OAuth2Session):
-    from app.config import access_code_pickle_path, load_pickle
+    from app.config import access_code_pickle_path
 
     def first_time_auth():
         authorization_url, _ = oauth.authorization_url(oauth_url)
@@ -130,8 +137,7 @@ def ensure_has_oauth_token(oauth: OAuth2Session):
 
 
 def main():
-    from app.config import enabled
-    from time import sleep
+    from app.config import enabled, polling_rate, start_from, videos
 
     while not enabled():
         print(
@@ -142,14 +148,7 @@ def main():
     oauth = OAuth2Session(client_id=client_id(), redirect_uri=redirect_uri, scope=scope)
     ensure_has_oauth_token(oauth)
 
-    import pafy
-    from os import remove
-    from app.detect import detect_videos, process_new_video
-    from app.config import polling_rate, start_from, videos
-    from app.webhooks import process_webhooks
-    from app.wordpress import post_video
-
-    def video_found(video, title, description, mp3, jpg, new):
+    def video_found(video, title, description, mp3, jpg, new, mark_as_processed):
         from oauthlib.oauth2.rfc6749.errors import (
             InvalidGrantError,
             TokenExpiredError,
@@ -163,18 +162,19 @@ def main():
         while True:
             try:
                 access_token = get_access_token(oauth)
-
                 print(f"\nUploading {title}")
                 upload_and_publish_episode(
                     access_token, title, description, file_path=mp3, thumbnail_path=jpg
                 )
-                remove(mp3)
-                remove(jpg)
+                os.remove(mp3)
+                os.remove(jpg)
                 print(f"Uploaded {title}")
-                break
             except (InvalidGrantError, TokenExpiredError, InvalidTokenError):
                 print("Token expired... refreshing")
                 refresh_access_token(oauth)
+            else:
+                mark_as_processed()
+                break
 
     process_video_callback = process_new_video(video_found, new=False)
     process_new_video_callback = process_new_video(video_found, new=True)
@@ -199,8 +199,6 @@ def main():
 
 
 if __name__ == "__main__":
-    from multiprocessing import freeze_support
-
-    freeze_support()
+    mp.freeze_support()
 
     main()

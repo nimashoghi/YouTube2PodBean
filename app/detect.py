@@ -1,5 +1,19 @@
+import re
+import tempfile
+from collections import OrderedDict
+from itertools import chain, islice
+from time import sleep
+
+import pafy
+import requests
+from dateutil import parser
+from xmltodict import parse
+
+from app.download import download_to_path
+from app.util import load_pickle, sanitize_title, save_pickle
+
+
 def is_valid_title(title):
-    import re
     from app.config import title_pattern, title_negative_pattern
 
     return re.search(title_pattern(), title, re.IGNORECASE) is not None and (
@@ -8,16 +22,7 @@ def is_valid_title(title):
     )
 
 
-def sanitize_title(title):
-    return "".join(
-        [c for c in title if c.isalpha() or c.isdigit() or c == " "]
-    ).rstrip()
-
-
-def download_thumbnail(video):
-    from app.download import download_to_path
-
-    title = sanitize_title(video.title)
+def download_thumbnail(video, title):
     url = video.bigthumbhd if video.bigthumbhd else video.bigthumb
 
     def get_url_extension(url, default="jpg"):
@@ -28,34 +33,33 @@ def download_thumbnail(video):
 
     print(f"Downloading thumbnail of '{title}' from {url}")
 
-    return download_to_path(url, f"/tmp/{title}.{get_url_extension(url)}")
+    _, path = tempfile.mkstemp(prefix=title, suffix=f".{get_url_extension(url)}")
+    return download_to_path(url, path)
 
 
-def download_youtube_audio(video):
-    from app.download import download_to_path
-
+def download_youtube_audio(video, title):
     best = video.getbestaudio(preftype="m4a")
 
-    title = sanitize_title(video.title)
-    url = best.url
+    print(f"Downloading audio stream of '{title}' from {best.url}")
 
-    print(f"Downloading audio stream of '{title}' from {url}")
+    _, path = tempfile.mkstemp(prefix=title, suffix=f".{best.extension}")
+    return download_to_path(best.url, path)
 
-    return download_to_path(url, f"/tmp/{title}.{best.extension}")
+
+def mark_as_processed(video):
+    from app.config import processed_pickle_path
+
+    print(f"Added {id} to processed")
+
+    processed = load_pickle(processed_pickle_path(), get_default=lambda: set([]))
+    save_pickle(processed_pickle_path(), set([video.videoid, *processed]))
 
 
 def is_processed(video):
-    from app.config import processed_pickle_path, load_pickle, save_pickle
+    from app.config import processed_pickle_path
 
-    id = video.videoid
     processed = load_pickle(processed_pickle_path(), get_default=lambda: set([]))
-    if id in processed:
-        return True
-    else:
-        print(f"Added {id} to processed")
-
-        save_pickle(processed_pickle_path(), set([id, *processed]))
-        return False
+    return video.videoid in processed
 
 
 def process_new_video(callback, new=False):
@@ -63,9 +67,20 @@ def process_new_video(callback, new=False):
         if is_processed(video):
             return False
 
-        mp3_path = download_youtube_audio(video)
-        thumbnail_path = download_thumbnail(video)
-        callback(video, video.title, video.description, mp3_path, thumbnail_path, new)
+        title = sanitize_title(video.title)
+
+        mp3_path = download_youtube_audio(video, title)
+        thumbnail_path = download_thumbnail(video, title)
+
+        callback(
+            video,
+            video.title,
+            video.description,
+            mp3_path,
+            thumbnail_path,
+            new,
+            lambda video=video: mark_as_processed(video),
+        )
 
         return True
 
@@ -84,10 +99,6 @@ def get_upload_info():
 
 
 def get_uploads_from_xml_feed(channel_id):
-    import pafy
-    import requests
-    from xmltodict import parse
-
     entries = parse(
         requests.get(
             f"https://www.youtube.com/feeds/videos.xml",
@@ -99,11 +110,6 @@ def get_uploads_from_xml_feed(channel_id):
 
 
 def get_all_uploads_updated():
-    import pafy
-    from collections import OrderedDict
-    from itertools import chain
-    from dateutil import parser
-
     channel_id, playlist_id = get_upload_info()
     playlist = pafy.get_playlist2(playlist_id)
     xml_playlist = get_uploads_from_xml_feed(channel_id) if channel_id else []
@@ -118,8 +124,7 @@ def get_all_uploads_updated():
 
 
 def get_all_uploads(refetch_latest=0):
-    from itertools import islice
-    from app.config import load_pickle, save_pickle, playlist_history_pickle_path
+    from app.config import playlist_history_pickle_path
 
     new_playlist = get_all_uploads_updated()
 
@@ -153,14 +158,11 @@ def check_start_from(videos, start_from):
 
 
 def detect_videos(f, new_only=True, start_from=None):
-    from app.config import youtube_enabled
+    from app.config import video_process_delay, youtube_enabled
 
     if not youtube_enabled():
         print("YouTube polling not enabled. Skipping current loop")
         return
-
-    from app.config import video_process_delay
-    from time import sleep
 
     if start_from:
         print(f'Video start point detected. Checking videos up to "{start_from}"')

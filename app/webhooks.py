@@ -1,3 +1,12 @@
+from datetime import datetime
+
+import pafy
+import requests
+from colorthief import ColorThief
+from dateutil import parser
+from discord_webhook import DiscordEmbed, DiscordWebhook
+
+
 def color_tuple_to_int(tuple):
     r, g, b = tuple
     return (
@@ -8,11 +17,8 @@ def color_tuple_to_int(tuple):
 
 
 def get_avatar(username):
-    from requests import get
-    from pafy import g
-
-    result = get(
-        f"https://www.googleapis.com/youtube/v3/channels?part=snippet&fields=items%2Fsnippet%2Fthumbnails%2Fdefault&forUsername={username}&key={g.api_key}"
+    result = requests.get(
+        f"https://www.googleapis.com/youtube/v3/channels?part=snippet&fields=items%2Fsnippet%2Fthumbnails%2Fdefault&forUsername={username}&key={pafy.g.api_key}"
     ).json()
 
     return result["items"][0]["snippet"]["thumbnails"]["default"]["url"]
@@ -26,11 +32,6 @@ def clip_text(text):
 
 
 def send_webhook(video, jpg, avatar_url, webhook_url):
-    from dateutil import parser
-    from discord_webhook import DiscordEmbed, DiscordWebhook
-    from datetime import datetime
-    from colorthief import ColorThief
-
     webhook = DiscordWebhook(url=webhook_url)
 
     embed = DiscordEmbed()
@@ -62,8 +63,6 @@ def process_webhooks(video, jpg):
         return
 
     from app.config import webhook_url_list
-    from dateutil import parser
-    from discord_webhook import DiscordEmbed, DiscordWebhook
 
     avatar_url = get_avatar(video.username)
 

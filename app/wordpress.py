@@ -1,3 +1,5 @@
+import re
+
 from wordpress_xmlrpc import Client, WordPressPost
 from wordpress_xmlrpc.methods import posts
 
@@ -18,8 +20,6 @@ def make_embed_code(video):
 
 
 def add_anchor_to_urls(text: str):
-    import re
-
     from app.constants import URL_REGEX
 
     return re.sub(URL_REGEX, r'<a href="\1">\1</a>', text)

@@ -1,37 +1,19 @@
-import pickle
+import re
 from functools import reduce
 from json import dump, load
-from os import environ
+from os import environ, path
 
-
-def load_pickle(path, get_default=None):
-    try:
-        with open(path, "rb") as f:
-            value = pickle.load(f)
-    except (OSError, IOError):
-        if get_default is None:
-            raise
-        value = get_default()
-        with open(path, "wb") as f:
-            pickle.dump(value, f)
-
-    return value
-
-
-def save_pickle(path, object):
-    with open(path, "wb") as f:
-        pickle.dump(object, f)
+import requests
 
 
 def parse_config_value(value):
     if not isinstance(value, str):
         return value
 
-    import re
-
     match = re.search(r"^\s*\$env:(\w+)\s*$", value)
     if not match:
         return value
+
     env_variable_name = match[1]
     return value.replace(match[0], environ[env_variable_name])
 
@@ -40,7 +22,6 @@ def config(config_name: str, default=None):
     config_names = config_name.split(":")
 
     def retrieve():
-        from os import path
 
         settings_file = environ.get("SETTINGS_FILE", "settings.json")
 
@@ -66,9 +47,7 @@ def config(config_name: str, default=None):
 
 
 def get_public_ip():
-    from requests import get
-
-    return get("https://api.ipify.org").text
+    return requests.get("https://api.ipify.org").text
 
 
 enabled = config("Enabled", default=False)
