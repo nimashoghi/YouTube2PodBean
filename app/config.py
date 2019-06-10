@@ -50,17 +50,17 @@ def get_public_ip() -> str:
     return requests.get("https://api.ipify.org").text
 
 
-enabled = config("Enabled", default=False)
+enabled = config("Enabled", default=True)
 
 host = config("Server:Host", default="0.0.0.0")
 port = config("Server:Port", default="23808")
 public_host = config("Server:PublicHost", default=get_public_ip())
 
-podbean_enabled = config("PodBean:Enabled", default=False)
+podbean_enabled = config("PodBean:Enabled", default=True)
 client_id = config("PodBean:ClientId")
 client_secret = config("PodBean:ClientSecret")
 
-youtube_enabled = config("YouTube:Enabled", default=False)
+youtube_enabled = config("YouTube:Enabled", default=True)
 youtube_api_key = config("YouTube:ApiKey")
 start_from = config("YouTube:StartFrom", default="")
 video_process_delay = config("YouTube:VideoProcessDelay", default=10.0)
@@ -70,12 +70,14 @@ title_pattern = config("YouTube:TitlePattern", default=".+")
 title_negative_pattern = config("YouTube:TitleNegativePattern", default="")
 videos = config("YouTube:CustomVideos", default=[])
 
-webhook_enabled = config("WebHook:Enabled", default=False)
+webhook_enabled = config("WebHook:Enabled", default=True)
 webhook_url_list = config("WebHook:UrlList", default=[])
 webhook_text_max_length = config("WebHook:TextMaxLength", default=100)
-webhook_default_avatar = config("WebHook:DefaultAvatarUrl", default="https://i.imgur.com/eYw9nVR.jpg")
+webhook_default_avatar = config(
+    "WebHook:DefaultAvatarUrl", default="https://i.imgur.com/eYw9nVR.jpg"
+)
 
-wp_enabled = config("WordPress:Enabled", default=False)
+wp_enabled = config("WordPress:Enabled", default=True)
 wp_xmlrpc_url = config("WordPress:XmlRpcUrl", default="")
 wp_username = config("WordPress:Username", default="")
 wp_password = config("WordPress:Password", default="")

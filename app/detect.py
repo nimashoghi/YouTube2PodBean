@@ -1,14 +1,16 @@
+import os
+import os.path
+import random
 import re
+import string
 import tempfile
 import time
 from collections import OrderedDict
 from itertools import chain, islice
 from logging import getLogger
 
-import dateutil
 import pafy
 import requests
-import xmltodict
 
 from app.download import download_to_path
 from app.util import load_pickle, sanitize_title, save_pickle
@@ -25,32 +27,49 @@ def is_valid_title(title):
     )
 
 
+def make_temp_file(
+    prefix, suffix, directory=f"{tempfile.gettempdir()}/youtube2podbean"
+):
+    if not os.path.isdir(directory):
+        os.mkdir(directory)
+    random_string = "".join(random.choice(string.ascii_lowercase) for _ in range(6))
+    return f"{directory}/{prefix}{random_string}{suffix}"
+
+
 def download_thumbnail(video, title):
     url = video.bigthumbhd if video.bigthumbhd else video.bigthumb
 
     def get_url_extension(url, default="jpg"):
-        import re
-
         match = re.search(url, r"\.(.+)\s*$")
         return match[1] if match else default
 
+    path = make_temp_file(prefix=f"{title}-", suffix=f".{get_url_extension(url)}")
+
+    logging.debug(
+        f"Downloading thumbnail of '{video.title}' (sanitizied = '{title}') from '{url}' into '{path}'"
+    )
+    path = download_to_path(url, path)
     logging.info(
-        f"Downloading thumbnail of '{video.title}' (sanitizied = '{title}') from {url}"
+        f"Downloaded thumbnail of '{video.title}' (sanitizied = '{title}') from '{url}' into '{path}'"
     )
 
-    _, path = tempfile.mkstemp(prefix=title, suffix=f".{get_url_extension(url)}")
-    return download_to_path(url, path)
+    return path
 
 
 def download_youtube_audio(video, title):
     best = video.getbestaudio(preftype="m4a")
 
+    path = make_temp_file(prefix=f"{title}-", suffix=f".{best.extension}")
+
+    logging.debug(
+        f"Downloading audio stream of '{video.title}' (sanitizied = '{title}') from '{best.url}' into '{path}'"
+    )
+    path = download_to_path(best.url, path)
     logging.info(
-        f"Downloading audio stream of '{video.title}' (sanitizied = '{title}') from {best.url}"
+        f"Downloaded audio stream of '{video.title}' (sanitizied = '{title}') from '{best.url}' into '{path}'"
     )
 
-    _, path = tempfile.mkstemp(prefix=title, suffix=f".{best.extension}")
-    return download_to_path(best.url, path)
+    return path
 
 
 def mark_as_processed(video):
@@ -98,48 +117,14 @@ def get_upload_info():
     from app.config import channel_id
 
     channel_id = channel_id()
-
-    if channel_id[1] == "C":
-        return channel_id, f"{channel_id[:1]}U{channel_id[2:]}"
-    else:
-        return None, channel_id
-
-
-def get_uploads_from_xml_feed(channel_id):
-    try:
-        entries = xmltodict.parse(
-            requests.get(
-                f"https://www.youtube.com/feeds/videos.xml",
-                params=dict(channel_id=channel_id),
-            ).text
-        )["feed"]["entry"]
-    except KeyError:  # no videos, "entry" key not found
-        entries = []
-
-    return [pafy.new(entry["yt:videoId"]) for entry in entries]
-
-
-def get_all_uploads_updated():
-    channel_id, playlist_id = get_upload_info()
-    playlist = pafy.get_playlist2(playlist_id)
-    xml_playlist = get_uploads_from_xml_feed(channel_id) if channel_id else []
-
-    # need to turn into list because we cannot write the result of OrderedDict(...).values() into a pickle file
-    return [
-        *OrderedDict(
-            (video.videoid, video)
-            for video in sorted(
-                (video for video in chain(playlist, xml_playlist)),
-                key=lambda video: dateutil.parser.parse(video.published),
-            )
-        ).values()
-    ]
+    return f"{channel_id[:1]}U{channel_id[2:]}" if channel_id[1] == "C" else channel_id
 
 
 def get_all_uploads(refetch_latest=0):
     from app.config import playlist_history_pickle_path
 
-    new_playlist = get_all_uploads_updated()
+    playlist_id = get_upload_info()
+    new_playlist = pafy.get_playlist2(playlist_id)
 
     saved_playlist = load_pickle(
         playlist_history_pickle_path(), lambda new_playlist=new_playlist: new_playlist

@@ -1,7 +1,7 @@
 import os
 
-import pafy
-import youtube_dl
+import pafy.g
+import youtube_dl.downloader.http
 
 
 class ydl:

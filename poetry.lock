@@ -350,14 +350,6 @@ version = "1.11.1"
 
 [[package]]
 category = "main"
-description = "Makes working with XML feel like you are working with JSON"
-name = "xmltodict"
-optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "0.12.0"
-
-[[package]]
-category = "main"
 description = "YouTube video downloader"
 name = "youtube-dl"
 optional = false
@@ -365,7 +357,7 @@ python-versions = "*"
 version = "2019.5.11"
 
 [metadata]
-content-hash = "a6da4b774e4d7e0a141afefe77ede875e8b3174cbdd7d5d5d3a9765e7af2f16e"
+content-hash = "e5ed59d090a798b8390451905e41884b8782526beaf6659a580a2df99fb632da"
 python-versions = "^3.7"
 
 [metadata.hashes]
@@ -401,5 +393,4 @@ typed-ast = ["132eae51d6ef3ff4a8c47c393a4ef5ebf0d1aecc96880eb5d6c8ceab7017cc9b",
 urllib3 = ["2393a695cd12afedd0dcb26fe5d50d0cf248e5a66f75dbd89a3d4eb333a61af4", "a637e5fae88995b256e3409dc4d52c2e2e0ba32c42a6365fee8bbd2238de3cfb"]
 werkzeug = ["0a73e8bb2ff2feecfc5d56e6f458f5b99290ef34f565ffb2665801ff7de6af7a", "7fad9770a8778f9576693f0cc29c7dcc36964df916b83734f4431c0e612a7fbc"]
 wrapt = ["4aea003270831cceb8a90ff27c4031da6ead7ec1886023b80ce0dfe0adf61533"]
-xmltodict = ["50d8c638ed7ecb88d90561beedbf720c9b4e851a9fa6c47ebd64e99d166d8a21", "8bbcb45cc982f48b2ca8fe7e7827c5d792f217ecf1792626f808bf41c3b86051"]
 youtube-dl = ["4b34f9da88a5ba1e4fb3cbf296b13252bc61e3f14ce25bcd8dc90a8bfa55dadd", "fe71aa725dc0f86deacdcc91f38492317d53b0ca8ec0f8bddc9961c205b4fea4"]

@@ -7,9 +7,11 @@ from typing import Callable
 
 import pafy
 import requests
-from oauthlib.oauth2.rfc6749.errors import (InvalidGrantError,
-                                            InvalidTokenError,
-                                            TokenExpiredError)
+from oauthlib.oauth2.rfc6749.errors import (
+    InvalidGrantError,
+    InvalidTokenError,
+    TokenExpiredError,
+)
 from requests_oauthlib import OAuth2Session
 
 from app.config import client_id, client_secret, port, public_host
@@ -33,6 +35,7 @@ publish_episode_url = "https://api.podbean.com/v1/episodes"
 
 
 def authorize_upload(access_token: str, file_path: str):
+    logging.debug(f"Attemping to upload file '{file_path}' to PodBean.")
     result = requests.get(
         authorize_upload_url,
         params=dict(
@@ -48,15 +51,18 @@ def authorize_upload(access_token: str, file_path: str):
     except BaseException as e:
         logging.error(f"Failed to authorize upload: {result}")
         raise e
+    else:
+        logging.debug(f"Successfully uploaded file '{file_path}' to PodBean.")
 
 
 def upload_file(file_path: str, presigned_url: str):
-    r = requests.put(
+    response = requests.put(
         presigned_url,
         headers={"Content-Type": mimetypes.guess_type(file_path)[0] or "audio/mpeg"},
         data=open(file_path, "rb"),
     )
-    if not r.ok:
+
+    if not response.ok:
         logging.error(
             f"Failed to upload file located at '{file_path}'. Presigned url = '{presigned_url}'"
         )
@@ -187,45 +193,59 @@ def main():
     ensure_has_oauth_token(oauth)
 
     def video_found(video, title, description, mp3, jpg, new, mark_as_processed):
+        logging.debug(
+            f"Processing video = '{video}';\n title = '{title}';\n description = '{description}';\n mp3 = '{mp3}';\n jpg = '{jpg}';\n new = '{new}'"
+        )
+
         if new:
+            logging.info(
+                f"Video '{title}' is a new video. Uploading to WordPress and posting to Discord."
+            )
+
             process_webhooks(video, jpg)
             post_video(video)
 
         while True:
             try:
                 access_token = get_access_token(oauth)
-                logging.debug(f"PodBean access token is {access_token}.")
+                logging.debug(f"PodBean access token is '{access_token}'.")
 
-                logging.info(f"Uploading '{title}' to PodBean...")
+                logging.debug(f"Uploading '{title}' to PodBean...")
                 upload_and_publish_episode(
                     access_token, title, description, video_path=mp3, thumbnail_path=jpg
                 )
                 logging.info(f"Successfully uploaded '{title}' to PodBean...")
-
-                logging.debug(f"Removing '{mp3}'")
-                logging.debug(f"Removing '{jpg}'")
-                os.remove(mp3)
-                os.remove(jpg)
-                logging.info(
-                    f"Removed mp3 and jpg files for '{title}' from tmp directory..."
-                )
             except (InvalidGrantError, TokenExpiredError, InvalidTokenError):
                 logging.info(
-                    f"Token expired while trying to upload {video.id}... refreshing"
+                    f"Token expired while trying to upload {video.videoid}... refreshing."
                 )
                 refresh_access_token(oauth)
             else:
                 mark_as_processed()
                 logging.debug(
-                    f"Marked '{video}' as successfully processed so we don't check it again."
+                    f"Marked '{video.title}' as successfully processed so we don't check it again."
                 )
                 break
+            finally:
+                logging.debug(f"Removing '{mp3}'")
+                os.remove(mp3)
+
+                logging.debug(f"Removing '{jpg}'")
+                os.remove(jpg)
+
+                logging.info(
+                    f"Removed mp3 and jpg files for '{title}' from tmp directory..."
+                )
 
     process_video_callback = process_new_video(video_found, new=False)
     process_new_video_callback = process_new_video(video_found, new=True)
 
     start_from_all = start_from()
-    logging.info(f"Processing all videos, starting from {start_from_all}...")
+    logging.info(
+        f"Processing all videos... " + f"Video start point set to {start_from_all}."
+        if start_from_all
+        else "No video start point set"
+    )
     detect_videos(process_video_callback, new_only=False, start_from=start_from_all)
 
     while True:
@@ -235,7 +255,11 @@ def main():
             process_video_callback(pafy.new(id))
 
         start_from_new = start_from()
-        logging.info(f"Processing new videos, start from {start_from_new}...")
+        logging.info(
+            f"Processing new videos... " + f"Video start point set to {start_from_new}."
+            if start_from_new
+            else "No video start point set"
+        )
         detect_videos(process_new_video_callback, start_from=start_from_new)
 
         wait_time = polling_rate()
@@ -243,10 +267,26 @@ def main():
         time.sleep(wait_time)
 
 
-if __name__ == "__main__":
+def setup_logging():
     import logging as logging_
 
-    logging_.basicConfig(level=logging_.DEBUG)
+    log_filename = f"./logs/youtube2podbean-{time.strftime('%Y%m%d-%H%M%S')}.log"
+    # log to both stderr and a file
+    logging_.basicConfig(
+        level=logging_.DEBUG,
+        handlers=[logging_.FileHandler(log_filename), logging_.StreamHandler()],
+    )
+    logging.info(f"Logging to '{log_filename}'")
+
+
+if __name__ == "__main__":
+    setup_logging()
     mp.freeze_support()
 
-    main()
+    try:
+        main()
+    except BaseException as e:
+        logging.exception(
+            msg=f"Top-level unhandled exception of type {type(e)}", exc_info=e
+        )
+        raise e  # reraise

@@ -6,3 +6,5 @@ pickles/
 .env
 .env.template
 settings.json
+logs/
+tmp/

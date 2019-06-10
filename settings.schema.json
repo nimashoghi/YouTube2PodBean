@@ -102,6 +102,12 @@
                     "description": "Maximum length of YouTube video description before the description gets clipped off",
                     "type": "number",
                     "default": 100
+                },
+                "DefaultAvatarUrl": {
+                    "title": "Default YouTube Avatar",
+                    "description": "Default avatar shown on Discord if we cannot fetch the channel's YouTube avatar for some reason.",
+                    "type": "string",
+                    "default": "https://i.imgur.com/eYw9nVR.jpg"
                 }
             }
         },

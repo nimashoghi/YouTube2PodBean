@@ -1,8 +1,8 @@
 from datetime import datetime
 from logging import getLogger
 
-import dateutil
-import pafy
+import dateutil.parser
+import pafy.g
 import requests
 from colorthief import ColorThief
 from discord_webhook import DiscordEmbed, DiscordWebhook
@@ -19,11 +19,36 @@ def color_tuple_to_int(tuple):
     )
 
 
-def get_avatar(username):
+def get_avatar(username_or_channel_id: str):
     try:
-        logging.debug(f"Trying to get avatar for YouTube username {username}")
+        # if a channel does not have a proper username, `username_or_channel_id` will include the channel id
+        username = None
+        channel_id = None
+        channel_info: dict = {}
+
+        if len(username_or_channel_id) == 24 and username_or_channel_id.startswith(
+            "UC"
+        ):
+            channel_id = username_or_channel_id
+            channel_info = dict(id=channel_id)
+        else:
+            username = username_or_channel_id
+            channel_info = dict(forUsername=username)
+
+        logging.debug(
+            "Trying to get avatar for YouTube channel with "
+            + f"channel id '{channel_id}'"
+            if channel_id
+            else f"username '{username}'"
+        )
         result = requests.get(
-            f"https://www.googleapis.com/youtube/v3/channels?part=snippet&fields=items%2Fsnippet%2Fthumbnails%2Fdefault&forUsername={username}&key={pafy.g.api_key}"
+            f"https://www.googleapis.com/youtube/v3/channels",
+            params=dict(
+                part="snippet",
+                fields="items/snippet/thumbnails/default",
+                key=pafy.g.api_key,
+                **channel_info,
+            ),
         ).json()
 
         return result["items"][0]["snippet"]["thumbnails"]["default"]["url"]
@@ -31,7 +56,7 @@ def get_avatar(username):
         from app.config import webhook_default_avatar
 
         default = webhook_default_avatar()
-        logging.debug(
+        logging.critical(
             f"Could not get avatar. Using default avatar ({default}) instead."
         )
         return default
@@ -51,7 +76,7 @@ def send_webhook(video, jpg, avatar_url, webhook_url):
     embed.set_url(video.watchv_url)
     embed.set_color(color_tuple_to_int(ColorThief(jpg).get_color(quality=1)))
     embed.set_title(video.title)
-    embed.add_embed_field(name="Description", value=clip_text(video.description))
+    embed.set_description(clip_text(video.description))
     embed.set_author(
         name=video.author,
         url=f"https://www.youtube.com/user/{video.username}",
@@ -67,15 +92,17 @@ def send_webhook(video, jpg, avatar_url, webhook_url):
 
 
 def process_webhooks(video, jpg):
-    from app.config import webhook_enabled
+    from app.config import webhook_enabled, webhook_url_list
 
     if not webhook_enabled():
         logging.info(
             f'Discord WebHook posting not enabled. Skipping sending "{video.title}" to Discord.'
         )
         return
-
-    from app.config import webhook_url_list
+    else:
+        logging.debug(
+            f"Processing Discord WebHook message for '{video.title}'. Video thumbnail is located at '{jpg}'."
+        )
 
     avatar_url = get_avatar(video.username)
 
@@ -85,4 +112,4 @@ def process_webhooks(video, jpg):
         )
         send_webhook(video, jpg, avatar_url, webhook_url)
 
-    logging.info(f'Successfully sent Discord WebHook for "{video.title}"')
+    logging.info(f"Successfully sent Discord WebHook for '{video.title}'")

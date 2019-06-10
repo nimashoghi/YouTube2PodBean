@@ -17,6 +17,8 @@ services:
         environment:
             - SETTINGS_FILE=/app/settings.json
         volumes:
+            - ./tmp:/tmp/youtube2podbean/
+            - ./logs:/app/logs
             - ./pickles:/app/pickles
             - ./settings.json:/app/settings.json
         ports:
@@ -46,3 +48,7 @@ services:
             MYSQL_USER: exampleuser
             MYSQL_PASSWORD: examplepass
             MYSQL_RANDOM_ROOT_PASSWORD: "1"
+        volumes:
+            - mysql-data-volume:/var/lib/mysql
+volumes:
+    mysql-data-volume:

@@ -11,15 +11,21 @@ logging = getLogger(__name__)
 def make_client():
     from app.config import wp_password, wp_username, wp_xmlrpc_url
 
-    if not wp_username() or not wp_password() or not wp_xmlrpc_url():
+    username = wp_username()
+    password = wp_password()
+    xmlrpc_url = wp_xmlrpc_url()
+
+    if not username or not password or not xmlrpc_url:
         logging.critical(
-            f"Incomplete or invalid WP XMLRPC information set. Skipping uploading to WordPress."
+            f"Incomplete or invalid WP XMLRPC information set (username = '{username}'; password = '****'; XMLRPC url = '{xmlrpc_url}'). Skipping uploading to WordPress."
         )
         return None
     else:
-        logging.debug("Creating WordPress client...")
+        logging.debug(
+            f"Creating WordPress client (username = '{username}'; password = '****'; XMLRPC url = '{xmlrpc_url}')..."
+        )
 
-    return xmlrpc.Client(wp_xmlrpc_url(), wp_username(), wp_password())
+    return xmlrpc.Client(xmlrpc_url, username, password)
 
 
 def make_embed_code(video):
@@ -46,6 +52,11 @@ def post_video(video):
         return None
 
     client = make_client()
+    if client is None:
+        logging.critical(
+            f"Failed to create XMLRPC client. Aborting posting video '{video.title}' to WordPress."
+        )
+        return None
 
     post = xmlrpc.WordPressPost()
     post.title = video.title
@@ -58,3 +69,4 @@ def post_video(video):
     logging.info(
         f"Successfully created WordPress post with '{id}' for video '{video.title}'"
     )
+    return id
