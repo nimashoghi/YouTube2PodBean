@@ -1,9 +1,11 @@
-import logging
 import re
+from logging import getLogger
 
 import wordpress_xmlrpc as xmlrpc
 
 from app.constants import URL_REGEX
+
+logging = getLogger(__name__)
 
 
 def make_client():

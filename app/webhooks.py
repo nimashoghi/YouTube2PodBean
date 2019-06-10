@@ -1,11 +1,13 @@
-import logging
 from datetime import datetime
+from logging import getLogger
 
 import dateutil
 import pafy
 import requests
 from colorthief import ColorThief
 from discord_webhook import DiscordEmbed, DiscordWebhook
+
+logging = getLogger(__name__)
 
 
 def color_tuple_to_int(tuple):

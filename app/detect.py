@@ -1,9 +1,9 @@
-import logging
 import re
 import tempfile
 import time
 from collections import OrderedDict
 from itertools import chain, islice
+from logging import getLogger
 
 import dateutil
 import pafy
@@ -12,6 +12,8 @@ import xmltodict
 
 from app.download import download_to_path
 from app.util import load_pickle, sanitize_title, save_pickle
+
+logging = getLogger(__name__)
 
 
 def is_valid_title(title):
@@ -104,12 +106,15 @@ def get_upload_info():
 
 
 def get_uploads_from_xml_feed(channel_id):
-    entries = xmltodict.parse(
-        requests.get(
-            f"https://www.youtube.com/feeds/videos.xml",
-            params=dict(channel_id=channel_id),
-        ).text
-    )["feed"]["entry"]
+    try:
+        entries = xmltodict.parse(
+            requests.get(
+                f"https://www.youtube.com/feeds/videos.xml",
+                params=dict(channel_id=channel_id),
+            ).text
+        )["feed"]["entry"]
+    except KeyError:  # no videos, "entry" key not found
+        entries = []
 
     return [pafy.new(entry["yt:videoId"]) for entry in entries]
 
@@ -119,13 +124,16 @@ def get_all_uploads_updated():
     playlist = pafy.get_playlist2(playlist_id)
     xml_playlist = get_uploads_from_xml_feed(channel_id) if channel_id else []
 
-    return OrderedDict(
-        (video.videoid, video)
-        for video in sorted(
-            (video for video in chain(playlist, xml_playlist)),
-            key=lambda video: dateutil.parser.parse(video.published),
-        )
-    ).values()
+    # need to turn into list because we cannot write the result of OrderedDict(...).values() into a pickle file
+    return [
+        *OrderedDict(
+            (video.videoid, video)
+            for video in sorted(
+                (video for video in chain(playlist, xml_playlist)),
+                key=lambda video: dateutil.parser.parse(video.published),
+            )
+        ).values()
+    ]
 
 
 def get_all_uploads(refetch_latest=0):

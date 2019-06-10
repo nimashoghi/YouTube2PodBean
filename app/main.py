@@ -1,8 +1,8 @@
-import logging
 import mimetypes
 import multiprocessing as mp
 import os
 import time
+from logging import getLogger
 from typing import Callable
 
 import pafy
@@ -18,6 +18,9 @@ from app.server import get_oauth_code as get_oauth_code_from_server
 from app.util import load_pickle, save_pickle
 from app.webhooks import process_webhooks
 from app.wordpress import post_video
+
+logging = getLogger(__name__)
+
 
 redirect_uri = f"http://{public_host()}:{port()}"
 scope = ["podcast_read", "podcast_update", "episode_read", "episode_publish"]
@@ -241,7 +244,9 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    import logging as logging_
+
+    logging_.basicConfig(level=logging_.DEBUG)
     mp.freeze_support()
 
     main()
