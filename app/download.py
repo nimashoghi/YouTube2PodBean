@@ -1,12 +1,12 @@
 import os
 
+import pafy
 import youtube_dl
-from pafy import g
 
 
 class ydl:
     def urlopen(self, url):
-        return g.opener.open(url)
+        return pafy.g.opener.open(url)
 
     def to_screen(self, *args, **kwargs):
         pass

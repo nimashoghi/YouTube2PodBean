@@ -1,7 +1,7 @@
+import json
+import os
 import re
 from functools import reduce
-from json import dump, load
-from os import environ, path
 
 import requests
 
@@ -15,7 +15,7 @@ def parse_config_value(value):
         return value
 
     env_variable_name = match[1]
-    return value.replace(match[0], environ[env_variable_name])
+    return value.replace(match[0], os.environ[env_variable_name])
 
 
 def config(config_name: str, default=None):
@@ -23,17 +23,17 @@ def config(config_name: str, default=None):
 
     def retrieve():
 
-        settings_file = environ.get("SETTINGS_FILE", "settings.json")
+        settings_file = os.environ.get("SETTINGS_FILE", "settings.json")
 
-        if not path.exists(settings_file):
+        if not os.path.exists(settings_file):
             with open(settings_file, "w") as f:
-                dump({}, f)
+                json.dump({}, f)
 
         with open(settings_file, "r") as f:
-            json = load(f)
+            data = json.load(f)
 
         try:
-            value = reduce(lambda acc, update: acc[update], config_names, json)
+            value = reduce(lambda acc, update: acc[update], config_names, data)
             if not value and default is not None:
                 value = default
         except:

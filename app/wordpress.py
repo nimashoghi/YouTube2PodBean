@@ -1,7 +1,8 @@
 import re
 
-from wordpress_xmlrpc import Client, WordPressPost
-from wordpress_xmlrpc.methods import posts
+import wordpress_xmlrpc as xmlrpc
+
+from app.constants import URL_REGEX
 
 
 def make_client():
@@ -10,7 +11,7 @@ def make_client():
     if not wp_username() or not wp_password() or not wp_xmlrpc_url():
         return None
 
-    return Client(wp_xmlrpc_url(), wp_username(), wp_password())
+    return xmlrpc.Client(wp_xmlrpc_url(), wp_username(), wp_password())
 
 
 def make_embed_code(video):
@@ -20,8 +21,6 @@ def make_embed_code(video):
 
 
 def add_anchor_to_urls(text: str):
-    from app.constants import URL_REGEX
-
     return re.sub(URL_REGEX, r'<a href="\1">\1</a>', text)
 
 
@@ -40,12 +39,12 @@ def post_video(video):
 
     client = make_client()
 
-    post = WordPressPost()
+    post = xmlrpc.WordPressPost()
     post.title = video.title
     post.content = (
         f"{make_embed_code(video)}<hr />{process_description(video.description)}"
     )
     post.post_status = "publish"
 
-    id = client.call(posts.NewPost(post))
+    id = client.call(xmlrpc.methods.posts.NewPost(post))
     print(f'Successfully created WordPress post (ID = {id}) for "{video.title}"')

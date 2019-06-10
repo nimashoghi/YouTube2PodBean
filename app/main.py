@@ -1,7 +1,7 @@
 import mimetypes
 import multiprocessing as mp
 import os
-from time import sleep
+import time
 from typing import Callable
 
 import pafy
@@ -143,7 +143,7 @@ def main():
         print(
             "Application is not enabled (kill switch)... Checking again in 5 seconds."
         )
-        sleep(5.0)
+        time.sleep(5.0)
 
     oauth = OAuth2Session(client_id=client_id(), redirect_uri=redirect_uri, scope=scope)
     ensure_has_oauth_token(oauth)
@@ -195,7 +195,7 @@ def main():
 
         print()
         print("------------------------")
-        sleep(polling_rate())
+        time.sleep(polling_rate())
 
 
 if __name__ == "__main__":

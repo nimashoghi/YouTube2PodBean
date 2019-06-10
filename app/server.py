@@ -1,10 +1,10 @@
+import multiprocessing as mp
+import time
 from ctypes import c_char_p
-from multiprocessing import Manager, Process, set_start_method
-from time import sleep
 
 from flask import Flask, request
 
-set_start_method("spawn", True)
+mp.set_start_method("spawn", True)
 
 
 def run_app(code):
@@ -26,13 +26,13 @@ def run_app(code):
 
 
 def get_oauth_code():
-    manager = Manager()
+    manager = mp.Manager()
     code = manager.Value(c_char_p, "")
-    server = Process(target=run_app, args=(code,))
+    server = mp.Process(target=run_app, args=(code,))
     server.start()
 
     while not code.value:
-        sleep(0.5)
+        time.sleep(0.5)
 
     server.terminate()
     server.join()

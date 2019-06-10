@@ -1,9 +1,9 @@
 from datetime import datetime
 
+import dateutil
 import pafy
 import requests
 from colorthief import ColorThief
-from dateutil import parser
 from discord_webhook import DiscordEmbed, DiscordWebhook
 
 
@@ -44,7 +44,7 @@ def send_webhook(video, jpg, avatar_url, webhook_url):
         url=f"https://www.youtube.com/user/{video.username}",
         icon_url=avatar_url,
     )
-    embed.set_timestamp(parser.parse(video.published).isoformat())
+    embed.set_timestamp(dateutil.parser.parse(video.published).isoformat())
     embed.set_thumbnail(url=video.bigthumbhd, width=480, height=360)
     # embed.set_image(url=video.bigthumbhd, width=480, height=360)
     embed.set_footer(text=f"Duration: {video.duration}")

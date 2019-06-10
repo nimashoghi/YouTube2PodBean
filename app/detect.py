@@ -1,13 +1,13 @@
 import re
 import tempfile
+import time
 from collections import OrderedDict
 from itertools import chain, islice
-from time import sleep
 
+import dateutil
 import pafy
 import requests
-from dateutil import parser
-from xmltodict import parse
+import xmltodict
 
 from app.download import download_to_path
 from app.util import load_pickle, sanitize_title, save_pickle
@@ -99,7 +99,7 @@ def get_upload_info():
 
 
 def get_uploads_from_xml_feed(channel_id):
-    entries = parse(
+    entries = xmltodict.parse(
         requests.get(
             f"https://www.youtube.com/feeds/videos.xml",
             params=dict(channel_id=channel_id),
@@ -118,7 +118,7 @@ def get_all_uploads_updated():
         (video.videoid, video)
         for video in sorted(
             (video for video in chain(playlist, xml_playlist)),
-            key=lambda video: parser.parse(video.published),
+            key=lambda video: dateutil.parser.parse(video.published),
         )
     ).values()
 
@@ -184,4 +184,4 @@ def detect_videos(f, new_only=True, start_from=None):
 
         delay = video_process_delay()
         print(f"Finished processing {item.title}. Waiting for {delay} seconds")
-        sleep(delay)
+        time.sleep(delay)
