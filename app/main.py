@@ -2,6 +2,7 @@ import mimetypes
 import multiprocessing as mp
 import os
 import time
+from datetime import datetime
 from logging import getLogger
 from typing import Callable
 
@@ -14,7 +15,6 @@ from oauthlib.oauth2.rfc6749.errors import (
 )
 from requests_oauthlib import OAuth2Session
 
-from app.config import client_id, client_secret, port, public_host
 from app.detect import detect_videos, process_new_video
 from app.server import get_oauth_code as get_oauth_code_from_server
 from app.util import load_pickle, save_pickle
@@ -24,7 +24,12 @@ from app.wordpress import post_video
 logging = getLogger(__name__)
 
 
-redirect_uri = f"http://{public_host()}:{port()}"
+def redirect_uri():
+    from app.config import port, public_host
+
+    return f"http://{public_host()}:{port()}"
+
+
 scope = ["podcast_read", "podcast_update", "episode_read", "episode_publish"]
 
 oauth_url = "https://api.podbean.com/v1/dialog/oauth"
@@ -153,20 +158,36 @@ def refresh_access_token(oauth: OAuth2Session):
     new_token_info = oauth.refresh_token(
         token_url=token_url, refresh_token=token_info["refresh_token"]
     )
+    new_token_info["expires_at"] = (
+        datetime.timestamp(datetime.now()) + new_token_info["expires_in"]
+    )
     token_info.update(new_token_info)
     save_pickle(access_code_pickle_path(), token_info)
+    return token_info
 
 
 def get_access_token(oauth: OAuth2Session):
     from app.config import access_code_pickle_path
 
-    return load_pickle(access_code_pickle_path())["access_token"]
+    token_info = load_pickle(access_code_pickle_path())
+    expires_at = datetime.fromtimestamp(token_info["expires_at"])
+    if expires_at <= datetime.now():
+        logging.info(
+            f"Stored access token has expired '{token_info['access_token']}'. Refreshing with refresh token '{token_info['refresh_token']}'..."
+        )
+        token_info = refresh_access_token(oauth)
+    else:
+        logging.debug(f"Access token is not expired.")
+
+    return token_info["access_token"]
 
 
 def ensure_has_oauth_token(oauth: OAuth2Session):
     from app.config import access_code_pickle_path
 
     def first_time_auth():
+        from app.config import client_id, client_secret
+
         authorization_url, _ = oauth.authorization_url(oauth_url)
         logging.critical(f"Please visit the link below:\n{authorization_url}")
         code = get_oauth_code_from_server()
@@ -180,8 +201,19 @@ def ensure_has_oauth_token(oauth: OAuth2Session):
     load_pickle(access_code_pickle_path(), get_default=first_time_auth)
 
 
+def check_api_key():
+    from app.config import youtube_api_key
+
+    api_key = youtube_api_key()
+    if api_key:
+        pafy.set_api_key(api_key)
+        logging.debug(f"Using API key '{api_key}' from config.")
+    else:
+        logging.debug("No YouTube API key set. Using pafy's default API key.")
+
+
 def main():
-    from app.config import enabled, polling_rate, start_from, videos
+    from app.config import client_id, enabled, polling_rate, start_from, videos
 
     while not enabled():
         logging.critical(
@@ -189,7 +221,9 @@ def main():
         )
         time.sleep(5.0)
 
-    oauth = OAuth2Session(client_id=client_id(), redirect_uri=redirect_uri, scope=scope)
+    oauth = OAuth2Session(
+        client_id=client_id(), redirect_uri=redirect_uri(), scope=scope
+    )
     ensure_has_oauth_token(oauth)
 
     def video_found(video, title, description, mp3, jpg, new, mark_as_processed):
@@ -205,40 +239,34 @@ def main():
             process_webhooks(video, jpg)
             post_video(video)
 
-        while True:
-            try:
-                access_token = get_access_token(oauth)
-                logging.debug(f"PodBean access token is '{access_token}'.")
+        try:
+            access_token = get_access_token(oauth)
+            logging.debug(f"PodBean access token is '{access_token}'.")
 
-                logging.debug(f"Uploading '{title}' to PodBean...")
-                upload_and_publish_episode(
-                    access_token, title, description, video_path=mp3, thumbnail_path=jpg
-                )
-                logging.info(f"Successfully uploaded '{title}' to PodBean...")
-            except (InvalidGrantError, TokenExpiredError, InvalidTokenError):
-                logging.info(
-                    f"Token expired while trying to upload {video.videoid}... refreshing."
-                )
-                refresh_access_token(oauth)
-            else:
-                mark_as_processed()
-                logging.debug(
-                    f"Marked '{video.title}' as successfully processed so we don't check it again."
-                )
-                break
-            finally:
-                logging.debug(f"Removing '{mp3}'")
-                os.remove(mp3)
+            logging.debug(f"Uploading '{title}' to PodBean...")
+            upload_and_publish_episode(
+                access_token, title, description, video_path=mp3, thumbnail_path=jpg
+            )
+            logging.info(f"Successfully uploaded '{title}' to PodBean...")
+            mark_as_processed()
+            logging.debug(
+                f"Marked '{video.title}' as successfully processed so we don't check it again."
+            )
+        finally:
+            logging.debug(f"Removing '{mp3}'")
+            os.remove(mp3)
 
-                logging.debug(f"Removing '{jpg}'")
-                os.remove(jpg)
+            logging.debug(f"Removing '{jpg}'")
+            os.remove(jpg)
 
-                logging.info(
-                    f"Removed mp3 and jpg files for '{title}' from tmp directory..."
-                )
+            logging.info(
+                f"Removed mp3 and jpg files for '{title}' from tmp directory..."
+            )
 
     process_video_callback = process_new_video(video_found, new=False)
     process_new_video_callback = process_new_video(video_found, new=True)
+
+    check_api_key()
 
     start_from_all = start_from()
     logging.info(
@@ -249,6 +277,9 @@ def main():
     detect_videos(process_video_callback, new_only=False, start_from=start_from_all)
 
     while True:
+        logging.debug("Checking YouTube API key...")
+        check_api_key()
+
         logging.info("Processing manual videos...")
         for id in videos():
             logging.info(f"Processing '{id}'")

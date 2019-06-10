@@ -20,6 +20,12 @@ def color_tuple_to_int(tuple):
 
 
 def get_avatar(username_or_channel_id: str):
+    def get_youtube_api_key():
+        from app.config import youtube_api_key
+
+        api_key = youtube_api_key()
+        return api_key if api_key else pafy.g.api_key
+
     try:
         # if a channel does not have a proper username, `username_or_channel_id` will include the channel id
         username = None
@@ -46,7 +52,7 @@ def get_avatar(username_or_channel_id: str):
             params=dict(
                 part="snippet",
                 fields="items/snippet/thumbnails/default",
-                key=pafy.g.api_key,
+                key=get_youtube_api_key(),
                 **channel_info,
             ),
         ).json()

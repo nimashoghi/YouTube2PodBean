@@ -43,6 +43,11 @@
                     "type": "boolean",
                     "default": true
                 },
+                "ApiKey": {
+                    "title": "YouTube Data v3 API Key",
+                    "description": "If empty, this uses the default API key from the 'pafy' Python package. You can get your own API key from the Google Cloud developer console.",
+                    "type": "string"
+                },
                 "ChannelId": {
                     "title": "Channel ID",
                     "description": "How to get your channel ID: https://www.youtube.com/watch?v=tUhIA3pIHSQ",

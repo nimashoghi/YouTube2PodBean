@@ -61,7 +61,7 @@ client_id = config("PodBean:ClientId")
 client_secret = config("PodBean:ClientSecret")
 
 youtube_enabled = config("YouTube:Enabled", default=True)
-youtube_api_key = config("YouTube:ApiKey")
+youtube_api_key = config("YouTube:ApiKey", default="")
 start_from = config("YouTube:StartFrom", default="")
 video_process_delay = config("YouTube:VideoProcessDelay", default=10.0)
 channel_id = config("YouTube:ChannelId")
