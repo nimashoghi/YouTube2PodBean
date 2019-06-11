@@ -8,9 +8,11 @@ from typing import Callable
 
 import pafy
 import requests
-from oauthlib.oauth2.rfc6749.errors import (InvalidGrantError,
-                                            InvalidTokenError,
-                                            TokenExpiredError)
+from oauthlib.oauth2.rfc6749.errors import (
+    InvalidGrantError,
+    InvalidTokenError,
+    TokenExpiredError,
+)
 from requests_oauthlib import OAuth2Session
 
 from app.detect import detect_videos, process_new_video
@@ -226,7 +228,7 @@ def check_api_key():
 
 
 def main():
-    from app.config import client_id, enabled, polling_rate, start_from, videos
+    from app.config import client_id, custom_videos, enabled, polling_rate, start_from
 
     while not enabled():
         logging.critical(
@@ -294,9 +296,18 @@ def main():
         check_api_key()
 
         logging.info("Processing manual videos...")
-        for id in videos():
-            logging.info(f"Processing '{id}'")
-            process_video_callback(pafy.new(id))
+        unprocessed_videos = []
+        for id in custom_videos():
+            video = pafy.new(id)
+            try:
+                logging.info(f"Processing custom video '{video.title}'")
+                process_video_callback(video)
+            except:
+                logging.error(
+                    f"Failed to process custom video '{video.title}'. Retrying the video in the next iteration."
+                )
+                unprocessed_videos.append(id)
+        custom_videos(unprocessed_videos)  # failed videos get retried
 
         start_from_new = start_from()
         logging.info(

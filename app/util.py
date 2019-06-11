@@ -1,7 +1,13 @@
 import pickle
 from logging import getLogger
 
+import requests
+
 logging = getLogger(__name__)
+
+
+def get_public_ip() -> str:
+    return requests.get("https://api.ipify.org").text
 
 
 def sanitize_title(title):

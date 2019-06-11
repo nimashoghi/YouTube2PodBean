@@ -2,11 +2,12 @@ import json
 import os
 import re
 from functools import reduce
+from typing import Any, Union
 
-import requests
+from app.util import get_public_ip
 
 
-def parse_config_value(value: str) -> str:
+def parse_config_value(value: Any) -> Any:
     if not isinstance(value, str):
         return value
 
@@ -18,24 +19,14 @@ def parse_config_value(value: str) -> str:
     return value.replace(match[0], os.environ[env_variable_name])
 
 
-def config(config_name: str, default=None):
-    config_names = config_name.split(":")
+def config(config_name: str, default: Any = None):
+    [*config_path, config_name] = config_name.split(":")
 
-    def retrieve():
-
-        settings_file = os.environ.get("SETTINGS_FILE", "settings.json")
-
-        if not os.path.exists(settings_file):
-            with open(settings_file, "w") as f:
-                json.dump({}, f)
-
-        with open(settings_file, "r") as f:
-            data = json.load(f)
-
+    def get_value(data: dict) -> Any:
         try:
-            value = reduce(lambda acc, update: acc[update], config_names, data)
-            if not value and default is not None:
-                value = default
+            value = reduce(
+                lambda acc, update: acc[update], [*config_path, config_name], data
+            )
         except:
             if default is not None:
                 value = default
@@ -43,11 +34,38 @@ def config(config_name: str, default=None):
                 raise
         return parse_config_value(value)
 
+    def set_value(data: dict, value: Any, settings_file: str) -> Any:
+        value = parse_config_value(value)
+        config = data
+        for path in config_path:
+            if path not in config:
+                config[path] = {}
+            config = config[path]
+        config[config_name] = value
+
+        with open(settings_file, "w") as f:
+            json.dump(data, f, indent=4)
+
+        return value
+
+    def retrieve(value: Union[Any, None] = None) -> Any:
+        settings_file = os.environ.get("SETTINGS_FILE", "./settings.json")
+
+        data: dict
+        if not os.path.exists(settings_file):
+            data = {}
+            with open(settings_file, "w") as f:
+                json.dump(data, f)
+        else:
+            with open(settings_file, "r") as f:
+                data = json.load(f)
+
+        if value is None:
+            return get_value(data)
+        else:
+            return set_value(data, value, settings_file)
+
     return retrieve
-
-
-def get_public_ip() -> str:
-    return requests.get("https://api.ipify.org").text
 
 
 enabled = config("Enabled", default=True)
@@ -68,7 +86,7 @@ channel_id = config("YouTube:ChannelId")
 polling_rate = config("YouTube:PollingRate", default=60.0)
 title_pattern = config("YouTube:TitlePattern", default=".+")
 title_negative_pattern = config("YouTube:TitleNegativePattern", default="")
-videos = config("YouTube:CustomVideos", default=[])
+custom_videos = config("YouTube:CustomVideos", default=[])
 
 webhook_enabled = config("WebHook:Enabled", default=True)
 webhook_url_list = config("WebHook:UrlList", default=[])
