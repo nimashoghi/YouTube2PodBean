@@ -27,51 +27,6 @@ def is_valid_title(title):
     )
 
 
-def make_temp_file(
-    prefix, suffix, directory=f"{tempfile.gettempdir()}/youtube2podbean"
-):
-    if not os.path.isdir(directory):
-        os.mkdir(directory)
-    random_string = "".join(random.choice(string.ascii_lowercase) for _ in range(6))
-    return f"{directory}/{prefix}{random_string}{suffix}"
-
-
-def download_thumbnail(video, title):
-    url = video.bigthumbhd if video.bigthumbhd else video.bigthumb
-
-    def get_url_extension(url, default="jpg"):
-        match = re.search(url, r"\.(.+)\s*$")
-        return match[1] if match else default
-
-    path = make_temp_file(prefix=f"{title}-", suffix=f".{get_url_extension(url)}")
-
-    logging.debug(
-        f"Downloading thumbnail of '{video.title}' (sanitizied = '{title}') from '{url}' into '{path}'"
-    )
-    path = download_to_path(url, path)
-    logging.info(
-        f"Downloaded thumbnail of '{video.title}' (sanitizied = '{title}') from '{url}' into '{path}'"
-    )
-
-    return path
-
-
-def download_youtube_audio(video, title):
-    best = video.getbestaudio(preftype="m4a")
-
-    path = make_temp_file(prefix=f"{title}-", suffix=f".{best.extension}")
-
-    logging.debug(
-        f"Downloading audio stream of '{video.title}' (sanitizied = '{title}') from '{best.url}' into '{path}'"
-    )
-    path = download_to_path(best.url, path)
-    logging.info(
-        f"Downloaded audio stream of '{video.title}' (sanitizied = '{title}') from '{best.url}' into '{path}'"
-    )
-
-    return path
-
-
 def mark_as_processed(video):
     from app.config import processed_pickle_path
 
@@ -113,17 +68,18 @@ def process_new_video(callback, new=False):
     return process
 
 
-def get_upload_info():
-    from app.config import channel_id
-
-    channel_id = channel_id()
-    return f"{channel_id[:1]}U{channel_id[2:]}" if channel_id[1] == "C" else channel_id
-
-
 def get_all_uploads(refetch_latest=0):
+    def get_playlist_id():
+        from app.config import channel_id
+
+        channel_id = channel_id()
+        return (
+            f"{channel_id[:1]}U{channel_id[2:]}" if channel_id[1] == "C" else channel_id
+        )
+
     from app.config import playlist_history_pickle_path
 
-    playlist_id = get_upload_info()
+    playlist_id = get_playlist_id()
     new_playlist = pafy.get_playlist2(playlist_id)
 
     saved_playlist = load_pickle(
@@ -151,6 +107,18 @@ def check_start_from(videos, start_from):
             if video.videoid == start_from:
                 logging.info(f"Video start point set to '{video.title}'")
                 break
+
+
+def check_api_key():
+    from app.config import youtube_api_key
+
+    logging.debug("Checking YouTube API key...")
+    api_key = youtube_api_key()
+    if api_key:
+        pafy.set_api_key(api_key)
+        logging.debug(f"Using API key '{api_key}' from config.")
+    else:
+        logging.debug("No YouTube API key set. Using pafy's default API key.")
 
 
 def detect_videos(f, new_only=True, start_from=None):

@@ -86,7 +86,7 @@ channel_id = config("YouTube:ChannelId")
 polling_rate = config("YouTube:PollingRate", default=60.0)
 title_pattern = config("YouTube:TitlePattern", default=".+")
 title_negative_pattern = config("YouTube:TitleNegativePattern", default="")
-custom_videos = config("YouTube:CustomVideos", default=[])
+manual_videos = config("YouTube:CustomVideos", default=[])
 
 webhook_enabled = config("WebHook:Enabled", default=True)
 webhook_url_list = config("WebHook:UrlList", default=[])
@@ -108,4 +108,7 @@ access_code_pickle_path = config(
 processed_pickle_path = config("Pickle:Processed", default="pickles/processed.pickle")
 playlist_history_pickle_path = config(
     "Pickle:PlaylistHistory", default="pickles/playlist_history.pickle"
+)
+webhook_posted_pickle_path = config(
+    "Pickle:WebHookPosted", default="pickles/webhook_posted.pickle"
 )

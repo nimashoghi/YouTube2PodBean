@@ -3,7 +3,7 @@ from logging import getLogger
 
 import wordpress_xmlrpc as xmlrpc
 
-from app.constants import URL_REGEX
+from app.util import URL_REGEX
 
 logging = getLogger(__name__)
 
