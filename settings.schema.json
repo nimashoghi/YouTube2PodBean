@@ -5,9 +5,9 @@
     "properties": {
         "MessageBroker": {
             "type": "string",
-            "title": "Kafka Mesage Broker URI",
+            "title": "MQTT Mesage Broker URI",
             "description": "This is the URI to the main message broker that communicates between the different modules of the application.",
-            "default": "amqp://user:password@message_broker/"
+            "default": "mqtt://message_broker/"
         },
         "PodBean": {
             "type": "object",
@@ -61,7 +61,8 @@
                 "PollingRate": {
                     "title": "API Polling Delay",
                     "description": "How many seconds should we wait before checking YouTube again?",
-                    "type": "number"
+                    "type": "number",
+                    "default": 120
                 },
                 "NumIterationsUntilRefetch": {
                     "title": "Number of Iterations Until Full YouTube Refetch",

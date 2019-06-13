@@ -4,13 +4,19 @@ from datetime import datetime
 from logging import getLogger
 from typing import Union
 
-import aio_pika as pika
 import dateutil.parser
 import wordpress_xmlrpc as xmlrpc
 from pafy.backend_youtube_dl import YtdlPafy
 
-from app.util import (URL_REGEX, get_videos, load_pickle, run_sync,
-                      save_pickle, setup_logging)
+from app.util import (
+    URL_REGEX,
+    get_videos,
+    load_pickle,
+    log_exceptions,
+    run_sync,
+    save_pickle,
+    setup_logging,
+)
 
 logging = getLogger(__name__)
 
@@ -127,46 +133,39 @@ async def mark_as_posted(id: str):
 
 
 async def main():
-    from app.config.core import message_broker
     from app.config.wordpress import wp_enabled
 
     await asyncio.sleep(5)  # sleep 5s to wait for rabbitmq server to go up
 
-    connection: pika.Connection = await pika.connect_robust(
-        await message_broker(), loop=asyncio.get_event_loop()
-    )
-    async with connection:
-        async for video in get_videos(connection):
-            [enabled, too_old, already_posted] = await asyncio.gather(
-                wp_enabled(), is_video_too_old(video), is_already_posted(video.videoid)
+    async for video in get_videos(topic="new_video/wordpress"):
+        [enabled, too_old, already_posted] = await asyncio.gather(
+            wp_enabled(), is_video_too_old(video), is_already_posted(video.videoid)
+        )
+
+        if not enabled:
+            logging.debug(
+                f"WordPress publishing not enabled. Skipping video '{video.title}'."
             )
-
-            if not enabled:
-                logging.debug(
-                    f"WordPress publishing not enabled. Skipping video '{video.title}'."
-                )
-                continue
-
-            if too_old:
-                logging.info(
-                    f"Video '{video.title}' is too old to upload to WordPress. Skipping."
-                )
-                continue
-
-            if already_posted:
-                logging.info(
-                    f"Video '{video.title}' is already posted to WordPress. Skipping"
-                )
-                continue
-
+            continue
+        if too_old:
             logging.info(
-                f"Video '{video.title}' has not been to WordPress. Posting the video to WordPRess"
+                f"Video '{video.title}' is too old to upload to WordPress. Skipping."
             )
+            continue
+        if already_posted:
+            logging.info(
+                f"Video '{video.title}' is already posted to WordPress. Skipping"
+            )
+            continue
 
-            await post_video(video)
-            await mark_as_posted(video.videoid)
+        logging.info(
+            f"Video '{video.title}' has not been to WordPress. Posting the video to WordPRess"
+        )
+
+        await post_video(video)
+        await mark_as_posted(video.videoid)
 
 
 if __name__ == "__main__":
     setup_logging("app.services.wordpress")
-    asyncio.run(main())
+    asyncio.run(log_exceptions(main, logging))

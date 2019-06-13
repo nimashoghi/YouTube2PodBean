@@ -3,12 +3,18 @@ from collections import OrderedDict
 from itertools import chain, islice
 from logging import getLogger
 
-import aio_pika as pika
 import pafy
 import pafy.g
 from pafy.backend_youtube_dl import YtdlPafy
 
-from app.util import load_pickle, save_pickle, send_video, setup_logging
+from app.util import (
+    create_client,
+    load_pickle,
+    log_exceptions,
+    save_pickle,
+    send_video,
+    setup_logging,
+)
 
 logging = getLogger(__name__)
 
@@ -200,19 +206,13 @@ async def check_api_key():
 
 
 async def main():
-    from app.config.core import message_broker
     from app.config.youtube import polling_rate, youtube_enabled
 
     await asyncio.sleep(5)  # sleep 5s to wait for rabbitmq server to go up
 
-    connection: pika.Connection = await pika.connect_robust(
-        await message_broker(), loop=asyncio.get_event_loop()
-    )
-    async with connection:
+    async with create_client() as client:
         logging.debug(f"Waiting for all other services to connect...")
         await asyncio.sleep(5)
-
-        channel = await connection.channel()
 
         while True:
             if not await youtube_enabled():
@@ -226,7 +226,11 @@ async def main():
             await check_api_key()
 
             async for video in get_new_uploads():
-                await send_video(video, channel)
+                await send_video(
+                    client,
+                    video,
+                    ["new_video/discord", "new_video/podbean", "new_video/wordpress"],
+                )
                 await mark_video_as_processed(video)
 
             await asyncio.sleep(await polling_rate())
@@ -234,4 +238,4 @@ async def main():
 
 if __name__ == "__main__":
     setup_logging("app.services.youtube")
-    asyncio.run(main())
+    asyncio.run(log_exceptions(main, logging))

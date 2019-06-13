@@ -1,13 +1,7 @@
 version: "3.1"
 services:
     message_broker:
-        image: rabbitmq:management
-        environment:
-            - RABBITMQ_DEFAULT_USER=user
-            - RABBITMQ_DEFAULT_PASS=password
-            # - RABBITMQ_DEFAULT_VHOST=0.0.0.0
-        ports:
-            - "8081:15672"
+        image: eclipse-mosquitto
         restart: always
     configurator:
         image: nimashoghi/configurator-server
@@ -26,7 +20,6 @@ services:
         environment:
             - SETTINGS_FILE=/app/settings.json
         volumes:
-            - ./tmp/youtube-service:/tmp/youtube2podbean/
             - ./logs/youtube-service:/app/logs
             - ./pickles:/app/pickles
             - ./settings.json:/app/settings.json
@@ -42,7 +35,6 @@ services:
         environment:
             - SETTINGS_FILE=/app/settings.json
         volumes:
-            - ./tmp/podbean-service:/tmp/youtube2podbean/
             - ./logs/podbean-service:/app/logs
             - ./pickles:/app/pickles
             - ./settings.json:/app/settings.json
@@ -61,7 +53,6 @@ services:
         environment:
             - SETTINGS_FILE=/app/settings.json
         volumes:
-            - ./tmp/discord-service:/tmp/youtube2podbean/
             - ./logs/discord-service:/app/logs
             - ./pickles:/app/pickles
             - ./settings.json:/app/settings.json
@@ -78,7 +69,6 @@ services:
         environment:
             - SETTINGS_FILE=/app/settings.json
         volumes:
-            - ./tmp/wordpress-service:/tmp/youtube2podbean/
             - ./logs/wordpress-service:/app/logs
             - ./pickles:/app/pickles
             - ./settings.json:/app/settings.json
