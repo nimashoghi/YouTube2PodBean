@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 from logging import getLogger
 
 import aio_pika as pika
@@ -101,6 +102,16 @@ async def mark_as_posted(id: str):
     await save_pickle(webhook_posted_pickle_path, set([id, *post_history]))
 
 
+async def is_video_too_old(video: YtdlPafy):
+    from app.config.discord import webhook_max_duration
+
+    max_duration = await webhook_max_duration()
+    return max_duration != 0 and (
+        (datetime.now() - dateutil.parser.parse(video.published)).total_seconds()
+        > max_duration
+    )
+
+
 async def main():
     from app.config.core import message_broker
     from app.config.discord import webhook_enabled
@@ -112,21 +123,29 @@ async def main():
     )
     async with connection:
         async for video in get_videos(connection):
-            if not await webhook_enabled():
+            [enabled, too_old, already_posted] = await asyncio.gather(
+                webhook_enabled(),
+                is_video_too_old(video),
+                is_already_posted(video.videoid),
+            )
+
+            if not enabled:
                 logging.info(
                     f'Discord WebHook posting not enabled. Skipping sending "{video.title}" to Discord.'
                 )
                 continue
-
-            if await is_already_posted(video.videoid):
+            if too_old:
+                logging.info(
+                    f"Video '{video.title}' is too old to upload to Discord. Skipping."
+                )
+                continue
+            if already_posted:
                 logging.info(
                     f"'{video.title}' has already been posted to Discord. Ignoring."
                 )
                 continue
-            else:
-                logging.info(
-                    f"'{video.title}' has not been posted to Discord. Posting."
-                )
+
+            logging.info(f"'{video.title}' has not been posted to Discord. Posting.")
 
             await process_discord(video)
             await mark_as_posted(video.videoid)

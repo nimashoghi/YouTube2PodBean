@@ -123,6 +123,12 @@
                     "description": "Maximum length of YouTube video description before the description gets clipped off",
                     "type": "number",
                     "default": 100
+                },
+                "MaxDuration": {
+                    "title": "Maximum Duration for Ignore (seconds)",
+                    "description": "Ignore older videos if their publish time is later than N seconds from now, where N is the current setting. Set to 0 to ignore this setting.",
+                    "type": "number",
+                    "default": 5400
                 }
             }
         },
@@ -162,6 +168,12 @@
                     "description": "The height of the embedded YouTube video on your WordPress post",
                     "type": "number",
                     "default": 315
+                },
+                "MaxDuration": {
+                    "title": "Maximum Duration for Ignore (seconds)",
+                    "description": "Ignore older videos if their publish time is later than N seconds from now, where N is the current setting. Set to 0 to ignore this setting.",
+                    "type": "number",
+                    "default": 5400
                 }
             }
         },

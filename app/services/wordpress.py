@@ -1,20 +1,16 @@
 import asyncio
 import re
+from datetime import datetime
 from logging import getLogger
 from typing import Union
 
 import aio_pika as pika
+import dateutil.parser
 import wordpress_xmlrpc as xmlrpc
 from pafy.backend_youtube_dl import YtdlPafy
 
-from app.util import (
-    URL_REGEX,
-    get_videos,
-    load_pickle,
-    run_sync,
-    save_pickle,
-    setup_logging,
-)
+from app.util import (URL_REGEX, get_videos, load_pickle, run_sync,
+                      save_pickle, setup_logging)
 
 logging = getLogger(__name__)
 
@@ -101,6 +97,16 @@ async def post_video(video: YtdlPafy) -> Union[str, None]:
     return id
 
 
+async def is_video_too_old(video: YtdlPafy):
+    from app.config.wordpress import wp_max_duration
+
+    max_duration = await wp_max_duration()
+    return max_duration != 0 and (
+        (datetime.now() - dateutil.parser.parse(video.published)).total_seconds()
+        > max_duration
+    )
+
+
 async def is_already_posted(id: str):
     from app.config.pickle import wp_post_history_pickle_path
 
@@ -131,21 +137,31 @@ async def main():
     )
     async with connection:
         async for video in get_videos(connection):
-            if not await wp_enabled():
+            [enabled, too_old, already_posted] = await asyncio.gather(
+                wp_enabled(), is_video_too_old(video), is_already_posted(video.videoid)
+            )
+
+            if not enabled:
                 logging.debug(
                     f"WordPress publishing not enabled. Skipping video '{video.title}'."
                 )
                 continue
 
-            if await is_already_posted(video.videoid):
+            if too_old:
+                logging.info(
+                    f"Video '{video.title}' is too old to upload to WordPress. Skipping."
+                )
+                continue
+
+            if already_posted:
                 logging.info(
                     f"Video '{video.title}' is already posted to WordPress. Skipping"
                 )
                 continue
-            else:
-                logging.info(
-                    f"Video '{video.title}' has not been to WordPress. Posting the video to WordPRess"
-                )
+
+            logging.info(
+                f"Video '{video.title}' has not been to WordPress. Posting the video to WordPRess"
+            )
 
             await post_video(video)
             await mark_as_posted(video.videoid)

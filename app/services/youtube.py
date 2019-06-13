@@ -26,13 +26,41 @@ async def get_all_uploads(refetch_latest=5):
     def video_to_ordered_pairs(videos):
         return reversed([(video.videoid, video) for video in videos])
 
-    from app.config.youtube import channel_id, youtube_num_iterations_until_refetch
+    def process_start_from(dict: OrderedDict, start_from: str):
+        # dict is reversed
+        if not start_from:
+            index = 0
+            logging.info(
+                f"YouTube 'start from' setting not set. Checking the entire YouTube playlist."
+            )
+        elif start_from in dict:
+            index = tuple(dict).index(start_from)
+            logging.info(
+                f"YouTube 'start from' is set to '{start_from}' and was found at index {index} (index 0 is the earliest video)."
+            )
+        else:
+            raise Exception(f"Start from video '{start_from}' was not found!")
+
+        items = list(dict.items())
+        skipped, selected = items[:index], items[index:]
+        logging.debug(
+            f"Skip index set to '{index}'. Skipping the following videos: {[id for id, _ in skipped]}"
+        )
+        for _, video in selected:
+            yield video
+
+    from app.config.youtube import (
+        channel_id,
+        start_from,
+        youtube_num_iterations_until_refetch,
+    )
     from app.config.pickle import playlist_history_pickle_path
 
-    channel_id, pickle_path, num_iterations_until_refetch = await asyncio.gather(
+    channel_id, pickle_path, num_iterations_until_refetch, start_from = await asyncio.gather(
         channel_id(),
         playlist_history_pickle_path(),
         youtube_num_iterations_until_refetch(),
+        start_from(),
     )
     playlist_id = get_playlist_id_for_channel_id(channel_id)
 
@@ -54,11 +82,12 @@ async def get_all_uploads(refetch_latest=5):
             f"Refetching the YouTube playlist '{new_playlist.title}' due to iteration count."
         )
         upload_check_iteration[playlist_id] = iteration_count + 1
-        for _, video in (
+        for video in process_start_from(
             await save_pickle(
                 pickle_path, OrderedDict(video_to_ordered_pairs(new_playlist))
-            )
-        ).items():
+            ),
+            start_from,
+        ):
             yield video
 
         return
@@ -117,7 +146,9 @@ async def get_all_uploads(refetch_latest=5):
         )
 
     upload_check_iteration[playlist_id] = iteration_count + 1
-    for _, video in (await save_pickle(pickle_path, saved_playlist)).items():
+    for video in process_start_from(
+        await save_pickle(pickle_path, saved_playlist), start_from
+    ):
         yield video
 
 

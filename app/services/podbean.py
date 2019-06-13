@@ -15,15 +15,8 @@ import aiohttp.web
 from pafy.backend_youtube_dl import YtdlPafy
 from requests_oauthlib import OAuth2Session
 
-from app.util import (
-    download_audio,
-    download_thumbnail,
-    get_videos,
-    load_pickle,
-    run_sync,
-    save_pickle,
-    setup_logging,
-)
+from app.util import (download_audio, download_thumbnail, get_videos,
+                      load_pickle, run_sync, save_pickle, setup_logging)
 
 logging = getLogger(__name__)
 
@@ -321,13 +314,17 @@ async def main():
     )
     async with connection:
         async for video in get_videos(connection):
-            if not await podbean_enabled():
+            [enabled, valid_title] = await asyncio.gather(
+                podbean_enabled(), is_valid_title(video.title)
+            )
+
+            if not enabled:
                 logging.debug(
                     f"PodBean processing not enabled. Skipping video '{video.title}'."
                 )
                 continue
 
-            if not await is_valid_title(video.title):
+            if not valid_title:
                 logging.debug(
                     f"Video '{video.title}' skipped because the title was not compatible with the configuration patterns."
                 )
