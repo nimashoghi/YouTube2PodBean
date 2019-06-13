@@ -3,11 +3,11 @@
     "description": "Contact Nima (nimashoghi@gmail.com) for more information",
     "type": "object",
     "properties": {
-        "Enabled": {
-            "type": "boolean",
-            "title": "Application Enabled",
-            "description": "Should the service start? Set this to off if you want to start the server but have it wait until you finish some configuration.",
-            "default": true
+        "MessageBroker": {
+            "type": "string",
+            "title": "Kafka Mesage Broker URI",
+            "description": "This is the URI to the main message broker that communicates between the different modules of the application.",
+            "default": "amqp://user:password@message_broker/"
         },
         "PodBean": {
             "type": "object",
@@ -59,8 +59,13 @@
                     "type": "string"
                 },
                 "PollingRate": {
-                    "title": "Polling Rate",
+                    "title": "API Polling Delay",
                     "description": "How many seconds should we wait before checking YouTube again?",
+                    "type": "number"
+                },
+                "NumIterationsUntilRefetch": {
+                    "title": "Number of Iterations Until Full YouTube Refetch",
+                    "description": "The application caches previous requests to the YouTube API to prevent spamming. However, we need to refetch the entire playlist every once in a while to make sure we haven't missed anything. For example, if our 'API Polling Delay' is 60 seconds and the value of this setting is 10, then we refetch the entire playlist every 600 seconds (or 10 minutes).",
                     "type": "number"
                 },
                 "TitlePattern": {
@@ -80,9 +85,20 @@
                     "items": {
                         "type": "string"
                     }
+                },
+                "DefaultAvatarUrl": {
+                    "title": "Default YouTube Avatar",
+                    "description": "Default avatar shown on Discord if we cannot fetch the channel's YouTube avatar for some reason.",
+                    "type": "string",
+                    "default": "https://i.imgur.com/eYw9nVR.jpg"
                 }
             },
-            "required": ["ChannelId", "PollingRate", "TitlePattern"]
+            "required": [
+                "ChannelId",
+                "PollingRate",
+                "NumIterationsUntilRefetch",
+                "TitlePattern"
+            ]
         },
         "WebHook": {
             "type": "object",
@@ -107,12 +123,6 @@
                     "description": "Maximum length of YouTube video description before the description gets clipped off",
                     "type": "number",
                     "default": 100
-                },
-                "DefaultAvatarUrl": {
-                    "title": "Default YouTube Avatar",
-                    "description": "Default avatar shown on Discord if we cannot fetch the channel's YouTube avatar for some reason.",
-                    "type": "string",
-                    "default": "https://i.imgur.com/eYw9nVR.jpg"
                 }
             }
         },
@@ -167,6 +177,12 @@
                     "type": "string"
                 },
                 "PlaylistHistory": {
+                    "type": "string"
+                },
+                "WebHookPosted": {
+                    "type": "string"
+                },
+                "WpPostHistory": {
                     "type": "string"
                 }
             }

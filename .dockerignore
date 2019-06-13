@@ -8,3 +8,6 @@ pickles/
 settings.json
 logs/
 tmp/
+.flake
+.travis.yml
+deploy.sh

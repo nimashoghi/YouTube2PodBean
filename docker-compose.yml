@@ -1,7 +1,16 @@
 version: "3.1"
 services:
+    message_broker:
+        image: rabbitmq:management
+        environment:
+            - RABBITMQ_DEFAULT_USER=user
+            - RABBITMQ_DEFAULT_PASS=password
+            # - RABBITMQ_DEFAULT_VHOST=0.0.0.0
+        ports:
+            - "8081:15672"
+        restart: always
     configurator:
-        image: "nimashoghi/configurator-server"
+        image: nimashoghi/configurator-server
         environment:
             - SCHEMA_FILE=/app/settings.schema.json
             - SETTINGS_FILE=/app/settings.json
@@ -11,14 +20,30 @@ services:
             - ./settings.schema.json:/app/settings.schema.json
         ports:
             - "80:80"
-    watcher:
-        # image: "nimashoghi/youtube2podbean:latest"
+    youtube_service:
         build: .
+        command: python -m app.services.youtube
         environment:
             - SETTINGS_FILE=/app/settings.json
         volumes:
-            - ./tmp:/tmp/youtube2podbean/
-            - ./logs:/app/logs
+            - ./tmp/youtube-service:/tmp/youtube2podbean/
+            - ./logs/youtube-service:/app/logs
+            - ./pickles:/app/pickles
+            - ./settings.json:/app/settings.json
+        restart: always
+        stdin_open: true
+        tty: true
+        depends_on:
+            - message_broker
+            - configurator
+    podbean_service:
+        build: .
+        command: python -m app.services.podbean
+        environment:
+            - SETTINGS_FILE=/app/settings.json
+        volumes:
+            - ./tmp/podbean-service:/tmp/youtube2podbean/
+            - ./logs/podbean-service:/app/logs
             - ./pickles:/app/pickles
             - ./settings.json:/app/settings.json
         ports:
@@ -27,7 +52,43 @@ services:
         stdin_open: true
         tty: true
         depends_on:
+            - message_broker
             - configurator
+            - youtube_service
+    discord_service:
+        build: .
+        command: python -m app.services.discord
+        environment:
+            - SETTINGS_FILE=/app/settings.json
+        volumes:
+            - ./tmp/discord-service:/tmp/youtube2podbean/
+            - ./logs/discord-service:/app/logs
+            - ./pickles:/app/pickles
+            - ./settings.json:/app/settings.json
+        restart: always
+        stdin_open: true
+        tty: true
+        depends_on:
+            - message_broker
+            - configurator
+            - youtube_service
+    wordpress_service:
+        build: .
+        command: python -m app.services.wordpress
+        environment:
+            - SETTINGS_FILE=/app/settings.json
+        volumes:
+            - ./tmp/wordpress-service:/tmp/youtube2podbean/
+            - ./logs/wordpress-service:/app/logs
+            - ./pickles:/app/pickles
+            - ./settings.json:/app/settings.json
+        restart: always
+        stdin_open: true
+        tty: true
+        depends_on:
+            - message_broker
+            - configurator
+            - youtube_service
     wordpress:
         image: wordpress
         restart: always
