@@ -1,22 +1,14 @@
 import asyncio
 from collections import OrderedDict
 from itertools import chain, islice
-from logging import getLogger
 
 import pafy
 import pafy.g
 from pafy.backend_youtube_dl import YtdlPafy
 
-from app.util import (
-    create_client,
-    load_pickle,
-    log_exceptions,
-    save_pickle,
-    send_video,
-    setup_logging,
-)
+from app.util import create_client, load_pickle, save_pickle, send_video, setup_logging
 
-logging = getLogger(__name__)
+logging = setup_logging("app.services.youtube")
 
 
 upload_check_iteration: dict = {}
@@ -193,18 +185,6 @@ async def get_new_uploads(refetch_latest=5):
             logging.debug(f"Ignoring video '{video.title}' because it is not new.")
 
 
-async def check_api_key():
-    from app.config.youtube import youtube_api_key
-
-    logging.debug("Checking YouTube API key...")
-    api_key = await youtube_api_key()
-    if api_key:
-        pafy.set_api_key(api_key)
-        logging.debug(f"Using API key '{api_key}' from config.")
-    else:
-        logging.debug("No YouTube API key set. Using pafy's default API key.")
-
-
 async def main():
     from app.config.youtube import polling_rate, youtube_enabled
 
@@ -223,8 +203,6 @@ async def main():
                     f"YouTube module is enabled. Running YouTube detection loop."
                 )
 
-            await check_api_key()
-
             async for video in get_new_uploads():
                 await send_video(
                     client,
@@ -236,6 +214,4 @@ async def main():
             await asyncio.sleep(await polling_rate())
 
 
-if __name__ == "__main__":
-    setup_logging("app.services.youtube")
-    asyncio.run(log_exceptions(main, logging))
+asyncio.run(main())

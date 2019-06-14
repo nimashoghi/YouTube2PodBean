@@ -1,7 +1,6 @@
 import asyncio
 import re
 from datetime import datetime
-from logging import getLogger
 from typing import Union
 
 import dateutil.parser
@@ -10,15 +9,14 @@ from pafy.backend_youtube_dl import YtdlPafy
 
 from app.util import (
     URL_REGEX,
-    get_videos,
     load_pickle,
-    log_exceptions,
+    new_video_event_handler,
     run_sync,
     save_pickle,
     setup_logging,
 )
 
-logging = getLogger(__name__)
+logging = setup_logging("app.services.wordpress")
 
 
 async def make_client() -> xmlrpc.Client:
@@ -132,40 +130,31 @@ async def mark_as_posted(id: str):
     await save_pickle(wp_post_history_pickle_path, set([id, *post_history]))
 
 
-async def main():
+@new_video_event_handler("new_video/wordpress")
+async def on_new_video(video: YtdlPafy):
     from app.config.wordpress import wp_enabled
 
-    await asyncio.sleep(5)  # sleep 5s to wait for rabbitmq server to go up
+    [enabled, too_old, already_posted] = await asyncio.gather(
+        wp_enabled(), is_video_too_old(video), is_already_posted(video.videoid)
+    )
 
-    async for video in get_videos(topic="new_video/wordpress"):
-        [enabled, too_old, already_posted] = await asyncio.gather(
-            wp_enabled(), is_video_too_old(video), is_already_posted(video.videoid)
+    if not enabled:
+        logging.debug(
+            f"WordPress publishing not enabled. Skipping video '{video.title}'."
         )
-
-        if not enabled:
-            logging.debug(
-                f"WordPress publishing not enabled. Skipping video '{video.title}'."
-            )
-            continue
-        if too_old:
-            logging.info(
-                f"Video '{video.title}' is too old to upload to WordPress. Skipping."
-            )
-            continue
-        if already_posted:
-            logging.info(
-                f"Video '{video.title}' is already posted to WordPress. Skipping"
-            )
-            continue
-
+        return
+    if too_old:
         logging.info(
-            f"Video '{video.title}' has not been to WordPress. Posting the video to WordPRess"
+            f"Video '{video.title}' is too old to upload to WordPress. Skipping."
         )
+        return
+    if already_posted:
+        logging.info(f"Video '{video.title}' is already posted to WordPress. Skipping")
+        return
 
-        await post_video(video)
-        await mark_as_posted(video.videoid)
+    logging.info(
+        f"Video '{video.title}' has not been to WordPress. Posting the video to WordPRess"
+    )
 
-
-if __name__ == "__main__":
-    setup_logging("app.services.wordpress")
-    asyncio.run(log_exceptions(main, logging))
+    await post_video(video)
+    await mark_as_posted(video.videoid)

@@ -42,20 +42,29 @@ async def subscribe_to_topic(client: MQTTClient, topic: str):
         logging.debug(f"Unsubscribed to the following MQTT topic: '{topic}'")
 
 
-async def get_videos(topic: str) -> AsyncIterator[YtdlPafy]:
-    # TODO: Handle failure
-    async with create_client() as client:
-        async with subscribe_to_topic(client, topic):
-            while True:
-                message: ApplicationMessage = await client.deliver_message()
-                logging.debug(
-                    f"Received a new message from MQTT topic '{message.topic}'"
-                )
-                packet: PublishPacket = message.publish_packet
-                if packet:
-                    payload: PublishPayload = packet.payload
-                    video = pickle.loads(payload.data)
-                    yield video
+def new_video_event_handler(topic: str, delay=5.0, init=None):
+    def decorator(original_func):
+        async def fn():
+            kwargs = {}
+            if init is not None:
+                kwargs = await init()
+
+            async with create_client() as client:
+                async with subscribe_to_topic(client, topic):
+                    while True:
+                        message: ApplicationMessage = await client.deliver_message()
+                        logging.debug(
+                            f"Received a new message from MQTT topic '{message.topic}'"
+                        )
+                        packet: PublishPacket = message.publish_packet
+                        if packet:
+                            payload: PublishPayload = packet.payload
+                            await original_func(pickle.loads(payload.data), **kwargs)
+
+        asyncio.run(fn())
+        return original_func
+
+    return decorator
 
 
 async def send_video(client: MQTTClient, video: YtdlPafy, topics: List[str]):

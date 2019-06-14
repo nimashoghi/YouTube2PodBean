@@ -1,6 +1,5 @@
 import asyncio
 from datetime import datetime
-from logging import getLogger
 
 import dateutil.parser
 from colorthief import ColorThief
@@ -12,15 +11,14 @@ from app.util import (
     color_tuple_to_int,
     download_thumbnail,
     get_avatar,
-    get_videos,
     load_pickle,
-    log_exceptions,
+    new_video_event_handler,
     run_sync,
     save_pickle,
     setup_logging,
 )
 
-logging = getLogger(__name__)
+logging = setup_logging("app.services.discord")
 
 
 async def send_webhook(
@@ -112,37 +110,29 @@ async def is_video_too_old(video: YtdlPafy):
     )
 
 
-async def main():
+@new_video_event_handler("new_video/discord")
+async def on_new_video(video: YtdlPafy):
     from app.config.discord import webhook_enabled
 
-    await asyncio.sleep(5)  # sleep 5s to wait for rabbitmq server to go up
-    async for video in get_videos(topic="new_video/discord"):
-        [enabled, too_old, already_posted] = await asyncio.gather(
-            webhook_enabled(), is_video_too_old(video), is_already_posted(video.videoid)
+    [enabled, too_old, already_posted] = await asyncio.gather(
+        webhook_enabled(), is_video_too_old(video), is_already_posted(video.videoid)
+    )
+
+    if not enabled:
+        logging.info(
+            f'Discord WebHook posting not enabled. Skipping sending "{video.title}" to Discord.'
         )
+        return
+    if too_old:
+        logging.info(
+            f"Video '{video.title}' is too old to upload to Discord. Skipping."
+        )
+        return
+    if already_posted:
+        logging.info(f"'{video.title}' has already been posted to Discord. Ignoring.")
+        return
 
-        if not enabled:
-            logging.info(
-                f'Discord WebHook posting not enabled. Skipping sending "{video.title}" to Discord.'
-            )
-            continue
-        if too_old:
-            logging.info(
-                f"Video '{video.title}' is too old to upload to Discord. Skipping."
-            )
-            continue
-        if already_posted:
-            logging.info(
-                f"'{video.title}' has already been posted to Discord. Ignoring."
-            )
-            continue
+    logging.info(f"'{video.title}' has not been posted to Discord. Posting.")
 
-        logging.info(f"'{video.title}' has not been posted to Discord. Posting.")
-
-        await process_discord(video)
-        await mark_as_posted(video.videoid)
-
-
-if __name__ == "__main__":
-    setup_logging("app.services.discord")
-    asyncio.run(log_exceptions(main, logging))
+    await process_discord(video)
+    await mark_as_posted(video.videoid)

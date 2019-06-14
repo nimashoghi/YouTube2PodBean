@@ -6,15 +6,6 @@ import pafy
 logging = getLogger(__name__)
 
 
-async def get_youtube_api_key() -> str:
-    from app.config.youtube import youtube_api_key
-
-    # TODO: check youtube api and get the API key that is available
-
-    api_key = await youtube_api_key()
-    return api_key if api_key else pafy.g.api_key
-
-
 async def get_avatar(username_or_channel_id: str) -> str:
     try:
         # if a channel does not have a proper username, `username_or_channel_id` will include the channel id
@@ -34,9 +25,7 @@ async def get_avatar(username_or_channel_id: str) -> str:
 
         logging.debug(
             "Trying to get avatar for YouTube channel with "
-            + f"channel id '{channel_id}'"
-            if channel_id
-            else f"username '{username}'"
+            + (f"channel id '{channel_id}'" if channel_id else f"username '{username}'")
         )
         async with aiohttp.ClientSession() as session:
             async with session.get(
@@ -44,14 +33,22 @@ async def get_avatar(username_or_channel_id: str) -> str:
                 params=dict(
                     part="snippet",
                     fields="items/snippet/thumbnails/default",
-                    key=await get_youtube_api_key(),
+                    key=pafy.g.api_key,
                     **channel_info,
                 ),
             ) as response:
+                logging.debug(
+                    f"Got the following response while trying to get avatar for user '{username_or_channel_id}': '{await response.text()}'"
+                )
                 json = await response.json()
                 return json["items"][0]["snippet"]["thumbnails"]["default"]["url"]
-    except BaseException:
+    except BaseException as e:
         from app.config.youtube import youtube_default_avatar
+
+        logging.exception(
+            f"Got an exception of type {type(e)} when trying to get avatar for user '{username_or_channel_id}'.",
+            exc_info=e,
+        )
 
         default_avatar = await youtube_default_avatar()
         logging.critical(

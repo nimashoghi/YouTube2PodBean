@@ -4,7 +4,9 @@ import time
 from typing import Callable
 
 
-def setup_logging(module: str):
+def setup_logging(module: str) -> logging.Logger:
+    logger = logging.getLogger(module)
+
     log_filename = f"./logs/{module}-{time.strftime('%Y%m%d-%H%M%S')}.log"
     # log to both stderr and a file
     logging.basicConfig(
@@ -13,9 +15,10 @@ def setup_logging(module: str):
     )
     logging.info(f"Logging to '{log_filename}'")
 
+    def exception_handler(type, value, tb):
+        logger.exception(f"Got an exception of type '{type}'", exc_info=value)
 
-async def log_exceptions(f: Callable, logger: logging.Logger):
-    try:
-        await f()
-    except BaseException as e:
-        logger.exception(f"Received an exception of type '{type(e)}'", exc_info=e)
+    # Install exception handler
+    sys.excepthook = exception_handler
+
+    return logger
