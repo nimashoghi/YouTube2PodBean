@@ -6,7 +6,8 @@ import pafy
 import pafy.g
 from pafy.backend_youtube_dl import YtdlPafy
 
-from app.util import create_client, load_pickle, save_pickle, send_video, setup_logging
+from app.util import (create_client, load_pickle, save_pickle, send_video,
+                      setup_logging)
 
 logging = setup_logging("app.services.youtube")
 
@@ -185,33 +186,44 @@ async def get_new_uploads(refetch_latest=5):
             logging.debug(f"Ignoring video '{video.title}' because it is not new.")
 
 
-async def main():
-    from app.config.youtube import polling_rate, youtube_enabled
+if __name__ == "__main__":
 
-    await asyncio.sleep(5)  # sleep 5s to wait for rabbitmq server to go up
+    async def main():
+        from app.config.youtube import polling_rate, youtube_enabled
 
-    async with create_client() as client:
-        logging.debug(f"Waiting for all other services to connect...")
-        await asyncio.sleep(5)
+        await asyncio.sleep(5)  # sleep 5s to wait for rabbitmq server to go up
 
-        while True:
-            if not await youtube_enabled():
-                logging.info(f"YouTube module is disabled. Skipping detection loop.")
-                return
-            else:
+        async with create_client() as client:
+            logging.debug(f"Waiting for all other services to connect...")
+            await asyncio.sleep(5)
+
+            while True:
+                [enabled, wait_time] = await asyncio.gather(
+                    youtube_enabled(), polling_rate()
+                )
+
+                if not enabled:
+                    logging.info(
+                        f"YouTube module is disabled. Skipping detection loop."
+                    )
+                    return
+
                 logging.debug(
                     f"YouTube module is enabled. Running YouTube detection loop."
                 )
 
-            async for video in get_new_uploads():
-                await send_video(
-                    client,
-                    video,
-                    ["new_video/discord", "new_video/podbean", "new_video/wordpress"],
-                )
-                await mark_video_as_processed(video)
+                async for video in get_new_uploads():
+                    await send_video(
+                        client,
+                        video,
+                        [
+                            "new_video/discord",
+                            "new_video/podbean",
+                            "new_video/wordpress",
+                        ],
+                    )
+                    await mark_video_as_processed(video)
 
-            await asyncio.sleep(await polling_rate())
+                await asyncio.sleep(wait_time)
 
-
-asyncio.run(main())
+    asyncio.run(main())

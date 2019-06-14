@@ -3,6 +3,8 @@ services:
     message_broker:
         image: eclipse-mosquitto
         restart: always
+        volumes:
+            - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
     configurator:
         image: nimashoghi/configurator-server
         environment:

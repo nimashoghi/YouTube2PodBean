@@ -130,31 +130,35 @@ async def mark_as_posted(id: str):
     await save_pickle(wp_post_history_pickle_path, set([id, *post_history]))
 
 
-@new_video_event_handler("new_video/wordpress")
-async def on_new_video(video: YtdlPafy):
-    from app.config.wordpress import wp_enabled
+if __name__ == "__main__":
 
-    [enabled, too_old, already_posted] = await asyncio.gather(
-        wp_enabled(), is_video_too_old(video), is_already_posted(video.videoid)
-    )
+    @new_video_event_handler("new_video/wordpress")
+    async def on_new_video(video: YtdlPafy):
+        from app.config.wordpress import wp_enabled
 
-    if not enabled:
-        logging.debug(
-            f"WordPress publishing not enabled. Skipping video '{video.title}'."
+        [enabled, too_old, already_posted] = await asyncio.gather(
+            wp_enabled(), is_video_too_old(video), is_already_posted(video.videoid)
         )
-        return
-    if too_old:
+
+        if not enabled:
+            logging.debug(
+                f"WordPress publishing not enabled. Skipping video '{video.title}'."
+            )
+            return
+        if too_old:
+            logging.info(
+                f"Video '{video.title}' is too old to upload to WordPress. Skipping."
+            )
+            return
+        if already_posted:
+            logging.info(
+                f"Video '{video.title}' is already posted to WordPress. Skipping"
+            )
+            return
+
         logging.info(
-            f"Video '{video.title}' is too old to upload to WordPress. Skipping."
+            f"Video '{video.title}' has not been to WordPress. Posting the video to WordPRess"
         )
-        return
-    if already_posted:
-        logging.info(f"Video '{video.title}' is already posted to WordPress. Skipping")
-        return
 
-    logging.info(
-        f"Video '{video.title}' has not been to WordPress. Posting the video to WordPRess"
-    )
-
-    await post_video(video)
-    await mark_as_posted(video.videoid)
+        await post_video(video)
+        await mark_as_posted(video.videoid)

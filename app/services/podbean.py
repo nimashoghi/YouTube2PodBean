@@ -304,39 +304,40 @@ async def add_to_podbean(
     logging.info(f"Successfully uploaded '{video.title}' to PodBean...")
 
 
-async def init():
-    from app.config.podbean import client_id, podbean_enabled
+if __name__ == "__main__":
 
-    [client_id, redirect] = await asyncio.gather(client_id(), redirect_uri())
-    oauth = OAuth2Session(client_id=client_id, redirect_uri=redirect, scope=scope)
-    await ensure_has_oauth_token(oauth)
-    return dict(oauth=oauth)
+    async def init():
+        from app.config.podbean import client_id, podbean_enabled
 
+        [client_id, redirect] = await asyncio.gather(client_id(), redirect_uri())
+        oauth = OAuth2Session(client_id=client_id, redirect_uri=redirect, scope=scope)
+        await ensure_has_oauth_token(oauth)
+        return dict(oauth=oauth)
 
-@new_video_event_handler("new_video/podbean", init=init)
-async def on_new_video(video: YtdlPafy, *, oauth: OAuth2Session):
-    from app.config.podbean import client_id, podbean_enabled
+    @new_video_event_handler("new_video/podbean", init=init)
+    async def on_new_video(video: YtdlPafy, *, oauth: OAuth2Session):
+        from app.config.podbean import client_id, podbean_enabled
 
-    [enabled, valid_title] = await asyncio.gather(
-        podbean_enabled(), is_valid_title(video.title)
-    )
-
-    if not enabled:
-        logging.debug(
-            f"PodBean processing not enabled. Skipping video '{video.title}'."
+        [enabled, valid_title] = await asyncio.gather(
+            podbean_enabled(), is_valid_title(video.title)
         )
-        return
 
-    if not valid_title:
-        logging.debug(
-            f"Video '{video.title}' skipped because the title was not compatible with the configuration patterns."
+        if not enabled:
+            logging.debug(
+                f"PodBean processing not enabled. Skipping video '{video.title}'."
+            )
+            return
+
+        if not valid_title:
+            logging.debug(
+                f"Video '{video.title}' skipped because the title was not compatible with the configuration patterns."
+            )
+            return
+
+        logging.debug(f"Download audio and thumbnail for '{video.title}'")
+        [audio_path, thumbnail_path] = await asyncio.gather(
+            download_audio(video), download_thumbnail(video)
         )
-        return
 
-    logging.debug(f"Download audio and thumbnail for '{video.title}'")
-    [audio_path, thumbnail_path] = await asyncio.gather(
-        download_audio(video), download_thumbnail(video)
-    )
-
-    logging.debug(f"Adding video '{video.title}' to PodBean")
-    await add_to_podbean(oauth, video, audio_path, thumbnail_path)
+        logging.debug(f"Adding video '{video.title}' to PodBean")
+        await add_to_podbean(oauth, video, audio_path, thumbnail_path)

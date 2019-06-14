@@ -110,29 +110,33 @@ async def is_video_too_old(video: YtdlPafy):
     )
 
 
-@new_video_event_handler("new_video/discord")
-async def on_new_video(video: YtdlPafy):
-    from app.config.discord import webhook_enabled
+if __name__ == "__main__":
 
-    [enabled, too_old, already_posted] = await asyncio.gather(
-        webhook_enabled(), is_video_too_old(video), is_already_posted(video.videoid)
-    )
+    @new_video_event_handler("new_video/discord")
+    async def on_new_video(video: YtdlPafy):
+        from app.config.discord import webhook_enabled
 
-    if not enabled:
-        logging.info(
-            f'Discord WebHook posting not enabled. Skipping sending "{video.title}" to Discord.'
+        [enabled, too_old, already_posted] = await asyncio.gather(
+            webhook_enabled(), is_video_too_old(video), is_already_posted(video.videoid)
         )
-        return
-    if too_old:
-        logging.info(
-            f"Video '{video.title}' is too old to upload to Discord. Skipping."
-        )
-        return
-    if already_posted:
-        logging.info(f"'{video.title}' has already been posted to Discord. Ignoring.")
-        return
 
-    logging.info(f"'{video.title}' has not been posted to Discord. Posting.")
+        if not enabled:
+            logging.info(
+                f'Discord WebHook posting not enabled. Skipping sending "{video.title}" to Discord.'
+            )
+            return
+        if too_old:
+            logging.info(
+                f"Video '{video.title}' is too old to upload to Discord. Skipping."
+            )
+            return
+        if already_posted:
+            logging.info(
+                f"'{video.title}' has already been posted to Discord. Ignoring."
+            )
+            return
 
-    await process_discord(video)
-    await mark_as_posted(video.videoid)
+        logging.info(f"'{video.title}' has not been posted to Discord. Posting.")
+
+        await process_discord(video)
+        await mark_as_posted(video.videoid)
