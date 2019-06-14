@@ -15,7 +15,7 @@ colorthief = "^0.2.1"
 python-wordpress-xmlrpc = "^2.3"
 aiofiles = "^0.4.0"
 aiohttp = "^3.5"
-hbmqtt = "^0.9.5"
+aiomqtt = "^0.1.1"
 
 [tool.poetry.dev-dependencies]
 pylint = {version = "^2.3",allows-prereleases = true}
