@@ -18,7 +18,7 @@ async def create_client():
 
     message_broker = await message_broker()
     try:
-        client = MQTTClient()
+        client = MQTTClient(config=dict(keep_alive=240))
         logging.debug(f"Connecting to message broker at '{message_broker}'")
         await client.connect(message_broker)
         logging.debug(f"Connected to message broker at '{message_broker}'")
@@ -59,7 +59,19 @@ def new_video_event_handler(topic: str, delay=5.0, init=None):
                         packet: PublishPacket = message.publish_packet
                         if packet:
                             payload: PublishPayload = packet.payload
-                            await original_func(pickle.loads(payload.data), **kwargs)
+                            video: YtdlPafy = pickle.loads(payload.data)
+                            logging.info(f"Processing video '{video.title}'")
+                            try:
+                                await original_func(video, **kwargs)
+                            except BaseException as e:
+                                logging.exception(
+                                    f"Got an exception of type '{type(e)}' while processing video '{video.title}'",
+                                    exc_info=e,
+                                )
+                            else:
+                                logging.info(
+                                    f"Successfully finished processing video '{video.title}'"
+                                )
 
         asyncio.run(fn())
         return original_func
