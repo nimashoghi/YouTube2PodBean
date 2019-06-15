@@ -1,0 +1,79 @@
+version: "3.1"
+services:
+    message_broker:
+        image: eclipse-mosquitto
+        restart: always
+        volumes:
+            - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+    configurator:
+        image: nimashoghi/configurator-server
+        environment:
+            - SCHEMA_FILE=/app/settings.schema.json
+            - SETTINGS_FILE=/app/settings.json
+            - UPDATE_PASSWORD=wG6gIvi7jE49yaNH5gRbNMCiUvcTn5IOCClsIPhcwkysE1i63wM41hml8GdRTTT6
+        volumes:
+            - ./settings.json:/app/settings.json
+            - ./settings.schema.json:/app/settings.schema.json
+        ports:
+            - "80:80"
+    youtube_service:
+        image: nimashoghi/youtube2podbean-youtube
+        environment:
+            - SETTINGS_FILE=/app/settings.json
+        volumes:
+            - ./logs/youtube-service:/app/logs
+            - ./pickles:/app/pickles
+            - ./settings.json:/app/settings.json
+        restart: always
+        stdin_open: true
+        tty: true
+        depends_on:
+            - message_broker
+            - configurator
+    podbean_service:
+        image: nimashoghi/youtube2podbean-podbean
+        environment:
+            - SETTINGS_FILE=/app/settings.json
+        volumes:
+            - ./logs/podbean-service:/app/logs
+            - ./pickles:/app/pickles
+            - ./settings.json:/app/settings.json
+        ports:
+            - "23808:23808"
+        restart: always
+        stdin_open: true
+        tty: true
+        depends_on:
+            - message_broker
+            - configurator
+            - youtube_service
+    discord_service:
+        image: nimashoghi/youtube2podbean-discord
+        environment:
+            - SETTINGS_FILE=/app/settings.json
+        volumes:
+            - ./logs/discord-service:/app/logs
+            - ./pickles:/app/pickles
+            - ./settings.json:/app/settings.json
+        restart: always
+        stdin_open: true
+        tty: true
+        depends_on:
+            - message_broker
+            - configurator
+            - youtube_service
+    wordpress_service:
+        image: nimashoghi/youtube2podbean-wordpress
+        environment:
+            - SETTINGS_FILE=/app/settings.json
+        volumes:
+            - ./logs/wordpress-service:/app/logs
+            - ./pickles:/app/pickles
+            - ./settings.json:/app/settings.json
+        restart: always
+        stdin_open: true
+        tty: true
+        depends_on:
+            - message_broker
+            - configurator
+            - youtube_service
