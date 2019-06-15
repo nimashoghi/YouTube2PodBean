@@ -7,24 +7,14 @@ import time
 from ctypes import c_char_p
 from datetime import datetime
 
-import aiofiles
 import aiohttp
 import aiohttp.web
 from pafy.backend_youtube_dl import YtdlPafy
 from requests_oauthlib import OAuth2Session
 
-from app.util import (
-    download_audio,
-    download_thumbnail,
-    is_already_posted,
-    load_pickle,
-    mark_as_posted,
-    new_video_event_handler,
-    run_sync,
-    save_pickle,
-    setup_logging,
-    temporary_files,
-)
+from app.util import (download_audio, download_thumbnail, is_already_posted,
+                      load_pickle, mark_as_posted, new_video_event_handler,
+                      run_sync, save_pickle, setup_logging, temporary_files)
 
 logging = setup_logging("app.services.podbean")
 
@@ -118,12 +108,11 @@ async def authorize_upload(access_token: str, file_path: str):
 
 
 async def upload_file(file_path: str, presigned_url: str):
-    async with aiofiles.open(file_path, mode="rb") as f:
-        data = await f.read()
+    with open(file_path, mode="rb") as f:
         async with aiohttp.ClientSession() as session:
             async with session.put(
                 url=presigned_url,
-                data=data,
+                data=f,
                 headers={
                     "Content-Type": mimetypes.guess_type(file_path)[0] or "audio/mpeg"
                 },

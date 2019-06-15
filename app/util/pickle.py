@@ -3,8 +3,6 @@ import pickle
 from logging import getLogger
 from typing import Any
 
-import aiofiles
-
 logging = getLogger(__name__)
 
 
@@ -13,8 +11,8 @@ async def load_pickle(path: str, get_default=None) -> Any:
         f"Loading pickle file at '{path}'. Default value {'exists' if get_default is not None else 'does not exist'}."
     )
     try:
-        async with aiofiles.open(path, mode="rb") as f:
-            value = pickle.loads(await f.read())
+        with open(path, mode="rb") as f:
+            value = pickle.load(f)
     except (OSError, IOError):
         if get_default is None:
             logging.error(
@@ -29,8 +27,8 @@ async def load_pickle(path: str, get_default=None) -> Any:
             value = await get_default()
         else:
             value = get_default()
-        async with aiofiles.open(path, mode="wb") as f:
-            await f.write(pickle.dumps(value))
+        with open(path, mode="wb") as f:
+            pickle.dump(value, f)
     else:
         logging.debug(
             f"Successfully loaded pickle file at '{path}'. Object is of type '{type(value)}'."
@@ -44,8 +42,8 @@ async def save_pickle(path: str, object: Any) -> Any:
         f"Saving object of type {type(object)} to the pickle file located at {path}."
     )
 
-    async with aiofiles.open(path, mode="wb") as f:
-        await f.write(pickle.dumps(object))
+    with open(path, mode="wb") as f:
+        pickle.dump(object, f)
 
     return object
 
