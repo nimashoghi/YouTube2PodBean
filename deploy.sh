@@ -1,3 +1,5 @@
+#!/bin/sh
+
 docker login -u $DOCKER_USRENAME -p $DOCKER_PASSWORD
 
 docker build --rm -f "Dockerfile" -t "nimashoghi/youtube2podbean:$TRAVIS_TAG" .

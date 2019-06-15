@@ -8,8 +8,9 @@ python:
 script: pytest
 # Docker release
 deploy:
-    - provider: script
-      script: "./deploy.sh"
+    - skip_cleanup: true
+      provider: script
+      script: chmod +x ./deploy.sh && ./deploy.sh
       on:
           branch: master
           tags: true
