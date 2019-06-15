@@ -9,7 +9,7 @@ script: pytest
 # Docker release
 deploy:
     - provider: script
-      script: deploy.sh
+      script: "./deploy.sh"
       on:
           branch: master
           tags: true
