@@ -13,9 +13,18 @@ import aiohttp.web
 from pafy.backend_youtube_dl import YtdlPafy
 from requests_oauthlib import OAuth2Session
 
-from app.util import (download_audio, download_thumbnail, is_already_posted,
-                      load_pickle, mark_as_posted, new_video_event_handler,
-                      run_sync, save_pickle, setup_logging)
+from app.util import (
+    download_audio,
+    download_thumbnail,
+    is_already_posted,
+    load_pickle,
+    mark_as_posted,
+    new_video_event_handler,
+    run_sync,
+    save_pickle,
+    setup_logging,
+    temporary_files,
+)
 
 logging = setup_logging("app.services.podbean")
 
@@ -296,10 +305,13 @@ async def add_to_podbean(
     audio_file_key, thumbnail_file_key = await upload_episode_files(
         access_token, audio_path, thumbnail_path, video.title
     )
+    logging.info(f"Successfully uploaded '{video.title}' to PodBean.")
+
+    logging.debug(f"Publishing episode '{video.title}' to PodBean...")
     await publish_episode(
         access_token, video.title, video.description, audio_file_key, thumbnail_file_key
     )
-    logging.info(f"Successfully uploaded '{video.title}' to PodBean...")
+    logging.info(f"Successfully published episode '{video.title}' to PodBean.")
 
 
 if __name__ == "__main__":
@@ -344,6 +356,8 @@ if __name__ == "__main__":
             download_audio(video), download_thumbnail(video)
         )
 
-        logging.debug(f"Adding video '{video.title}' to PodBean")
-        await add_to_podbean(oauth, video, audio_path, thumbnail_path)
-        await mark_as_posted(video.videoid, podbean_posted_pickle_path)
+        with temporary_files(audio_path, thumbnail_path):
+            logging.debug(f"Adding video '{video.title}' to PodBean...")
+            await add_to_podbean(oauth, video, audio_path, thumbnail_path)
+            await mark_as_posted(video.videoid, podbean_posted_pickle_path)
+            logging.debug(f"Added video '{video.title}' to PodBean")

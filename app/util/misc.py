@@ -1,4 +1,7 @@
+import os
+import os.path
 import re
+from contextlib import contextmanager
 from logging import getLogger
 
 import aiohttp
@@ -36,3 +39,16 @@ def clip_text(text: str, length: int) -> str:
 def get_url_extension(url, default="jpg"):
     match = re.search(url, r"\.(.+)\s*$")
     return match[1] if match else default
+
+
+@contextmanager
+def temporary_files(*files):
+    try:
+        yield files
+    finally:
+        logging.debug(f"Removing the following temporary files: '{files}'")
+        for f in files:
+            if os.path.exists(f) and os.path.isfile(f):
+                os.remove(f)
+                logging.debug(f"Removed '{f}'")
+        logging.debug(f"Removed the following temporary files: '{files}'")

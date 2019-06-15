@@ -187,12 +187,10 @@ if __name__ == "__main__":
     async def main():
         from app.config.youtube import polling_rate, youtube_enabled
 
-        await asyncio.sleep(5)  # sleep 5s to wait for rabbitmq server to go up
+        logging.debug(f"Waiting for all other services to connect...")
+        await asyncio.sleep(10)  # sleep 10s to wait for rabbitmq server to go up
 
         async with create_client() as client:
-            logging.debug(f"Waiting for all other services to connect...")
-            await asyncio.sleep(5)
-
             while True:
                 [enabled, wait_time] = await asyncio.gather(
                     youtube_enabled(), polling_rate()
@@ -202,7 +200,7 @@ if __name__ == "__main__":
                     logging.info(
                         f"YouTube module is disabled. Skipping detection loop."
                     )
-                    return
+                    continue
 
                 logging.debug(
                     f"YouTube module is enabled. Running YouTube detection loop."
@@ -214,7 +212,7 @@ if __name__ == "__main__":
                         logging.debug(
                             f"Ignoring video '{video.title}' because it is not new."
                         )
-                        return
+                        continue
 
                     logging.info(f"New video '{video.title}' detected. Processing")
 

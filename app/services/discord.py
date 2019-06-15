@@ -18,14 +18,13 @@ from app.util import (
     run_sync,
     save_pickle,
     setup_logging,
+    temporary_files,
 )
 
 logging = setup_logging("app.services.discord")
 
 
-async def send_webhook(
-    video: YtdlPafy, thumbnail_path: str, avatar_url: str, webhook_url: str
-):
+async def send_webhook(video: YtdlPafy, color: int, avatar_url: str, webhook_url: str):
     from app.config.discord import webhook_text_max_length
 
     webhook_text_max_length = await webhook_text_max_length()
@@ -39,9 +38,7 @@ async def send_webhook(
 
         embed = DiscordEmbed()
         embed.set_url(video.watchv_url)
-        embed.set_color(
-            color_tuple_to_int(ColorThief(thumbnail_path).get_color(quality=1))
-        )
+        embed.set_color(color)
         embed.set_title(video.title)
         embed.set_description(clip_text(video.description, webhook_text_max_length))
         embed.set_author(
@@ -62,20 +59,29 @@ async def send_webhook(
     return await run_sync(sync)
 
 
+async def get_thumbnail_primary_color(video: YtdlPafy):
+    logging.debug(f"Downloading thumbnail for video '{video.title}'...")
+    thumbnail_path = await download_thumbnail(video)
+    logging.debug(
+        f"Downloaded thumbnail for video '{video.title}' into '{thumbnail_path}'"
+    )
+    with temporary_files(thumbnail_path):
+        return color_tuple_to_int(ColorThief(thumbnail_path).get_color(quality=1))
+
+
 async def process_discord(video: YtdlPafy):
     from app.config.discord import webhook_url_list
 
-    thumbnail = await download_thumbnail(video)
-    logging.debug(f"Downloaded thumbnail for video '{video.title}' into '{thumbnail}'")
+    thumbnail_color = await get_thumbnail_primary_color(video)
 
     avatar_url = await get_avatar(video.username)
     logging.debug(
-        f"Processing Discord WebHook message for '{video.title}'. Video thumbnail is located at '{thumbnail}'. Avatar url is '{avatar_url}'."
+        f"Processing Discord WebHook message for '{video.title}'. Video thumbnail color is '{thumbnail_color:02x}'. Avatar url is '{avatar_url}'."
     )
 
     await asyncio.gather(
         *(
-            send_webhook(video, thumbnail, avatar_url, webhook_url)
+            send_webhook(video, thumbnail_color, avatar_url, webhook_url)
             for webhook_url in await webhook_url_list()
         )
     )
