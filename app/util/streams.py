@@ -1,13 +1,15 @@
 import asyncio
 import pickle
 from contextlib import asynccontextmanager
-from logging import getLogger
+from logging import Logger, getLogger
 from typing import AsyncIterator, List
 
 from hbmqtt.client import QOS_2, MQTTClient
 from hbmqtt.mqtt.publish import PublishPacket, PublishPayload
 from hbmqtt.session import ApplicationMessage
 from pafy.backend_youtube_dl import YtdlPafy
+
+from app.util import entrypoint
 
 logging = getLogger(__name__)
 
@@ -42,9 +44,9 @@ async def subscribe_to_topic(client: MQTTClient, topic: str):
         logging.debug(f"Unsubscribed to the following MQTT topic: '{topic}'")
 
 
-def new_video_event_handler(topic: str, delay=5.0, init=None):
+def new_video_event_handler(topic: str, *, logger: Logger, delay=5.0, init=None):
     def decorator(original_func):
-        async def fn():
+        async def main():
             kwargs = {}
             if init is not None:
                 kwargs = await init()
@@ -73,7 +75,7 @@ def new_video_event_handler(topic: str, delay=5.0, init=None):
                                     f"Successfully finished processing video '{video.title}'"
                                 )
 
-        asyncio.run(fn())
+        entrypoint(main, logger=logger)
         return original_func
 
     return decorator

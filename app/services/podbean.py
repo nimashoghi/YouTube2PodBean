@@ -13,17 +13,9 @@ import aiohttp.web
 from pafy.backend_youtube_dl import YtdlPafy
 from requests_oauthlib import OAuth2Session
 
-from app.util import (
-    download_audio,
-    download_thumbnail,
-    is_already_posted,
-    load_pickle,
-    mark_as_posted,
-    new_video_event_handler,
-    run_sync,
-    save_pickle,
-    setup_logging,
-)
+from app.util import (download_audio, download_thumbnail, is_already_posted,
+                      load_pickle, mark_as_posted, new_video_event_handler,
+                      run_sync, save_pickle, setup_logging)
 
 logging = setup_logging("app.services.podbean")
 
@@ -194,6 +186,7 @@ async def upload_episode_files(
         logging.debug(f"Uploading audio for '{title}' located at '{audio_path}'.")
         presigned_url, audio_file_key = await authorize_upload(access_token, audio_path)
         await upload_file(audio_path, presigned_url)
+        logging.debug(f"Uploaded audio for '{title}' located at '{audio_path}'.")
         return audio_file_key
 
     async def upload_thumbnail():
@@ -204,12 +197,15 @@ async def upload_episode_files(
             access_token, thumbnail_path
         )
         await upload_file(thumbnail_path, presigned_url)
+        logging.debug(
+            f"Uploaded thumbnail for '{title}' located at '{thumbnail_path}'."
+        )
         return thumbnail_file_key
 
     # run the two operations concurrently
-    [audio_file_key, thumbnail_file_key] = await asyncio.gather(
-        upload_audio(), upload_thumbnail()
-    )
+    audio_file_key = await upload_audio()
+    thumbnail_file_key = await upload_thumbnail()
+
     return audio_file_key, thumbnail_file_key
 
 
@@ -316,7 +312,7 @@ if __name__ == "__main__":
         await ensure_has_oauth_token(oauth)
         return dict(oauth=oauth)
 
-    @new_video_event_handler("new_video/podbean", init=init)
+    @new_video_event_handler("new_video/podbean", logger=logging, init=init)
     async def on_new_video(video: YtdlPafy, *, oauth: OAuth2Session):
         from app.config.podbean import client_id, podbean_enabled
         from app.config.pickle import podbean_posted_pickle_path

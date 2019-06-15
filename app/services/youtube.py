@@ -6,7 +6,14 @@ import pafy
 import pafy.g
 from pafy.backend_youtube_dl import YtdlPafy
 
-from app.util import create_client, load_pickle, save_pickle, send_video, setup_logging
+from app.util import (
+    create_client,
+    entrypoint,
+    load_pickle,
+    save_pickle,
+    send_video,
+    setup_logging,
+)
 
 logging = setup_logging("app.services.youtube")
 
@@ -41,9 +48,9 @@ async def get_all_uploads(refetch_latest=5):
 
         items = list(dict.items())
         skipped, selected = items[:index], items[index:]
-        logging.debug(
-            f"Skip index set to '{index}'. Skipping the following videos: {[id for id, _ in skipped]}"
-        )
+        logging.debug(f"Skip index set to '{index}'.")
+        logging.debug(f"Skipping the following videos: {[id for id, _ in skipped]}.")
+        logging.debug(f"Selecting the following videos: {[id for id, _ in selected]}.")
         for _, video in selected:
             yield video
 
@@ -224,4 +231,4 @@ if __name__ == "__main__":
 
                 await asyncio.sleep(wait_time)
 
-    asyncio.run(main())
+    entrypoint(main, logger=logging)

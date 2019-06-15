@@ -1,6 +1,8 @@
+import asyncio
 import logging
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 
 
@@ -22,3 +24,20 @@ def setup_logging(module: str) -> logging.Logger:
     sys.excepthook = exception_handler
 
     return logger
+
+
+def entrypoint(f, logger: logging.Logger):
+    def exception_handler(loop, context):
+        logger.exception(
+            f"Received an exception of type '{type(context['exception'])}' with message '{context['message']}'.",
+            exc_info=context["exception"],
+        )
+        return loop.default_exception_handler(context)
+
+    async def wrapper():
+        loop = asyncio.get_running_loop()
+        loop.set_default_executor(ThreadPoolExecutor())
+        loop.set_exception_handler(exception_handler)
+        return await f()
+
+    return asyncio.run(wrapper())

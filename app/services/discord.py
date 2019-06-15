@@ -95,7 +95,7 @@ async def is_video_too_old(video: YtdlPafy):
 
 if __name__ == "__main__":
 
-    @new_video_event_handler("new_video/discord")
+    @new_video_event_handler("new_video/discord", logger=logging)
     async def on_new_video(video: YtdlPafy):
         from app.config.discord import webhook_enabled
         from app.config.pickle import webhook_posted_pickle_path

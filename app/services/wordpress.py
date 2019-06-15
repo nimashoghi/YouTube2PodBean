@@ -115,7 +115,7 @@ async def is_video_too_old(video: YtdlPafy):
 
 if __name__ == "__main__":
 
-    @new_video_event_handler("new_video/wordpress")
+    @new_video_event_handler("new_video/wordpress", logger=logging)
     async def on_new_video(video: YtdlPafy):
         from app.config.pickle import wp_post_history_pickle_path
         from app.config.wordpress import wp_enabled
