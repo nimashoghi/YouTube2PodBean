@@ -333,7 +333,7 @@ if __name__ == "__main__":
             )
             return
 
-        if not already_posted:
+        if already_posted:
             logging.info(f"Video '{video.title}' has already been posted. Skipping.")
             return
 
