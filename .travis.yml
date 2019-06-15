@@ -1,8 +1,8 @@
-jobs:
-    include:
-        - stage: Docker Release
-          provider: script
-          script: deploy.sh
-          deploy:
-              on:
-                  tags: true
+# Docker release
+deploy:
+    provider: script
+    script: ./deploy.sh
+    deploy:
+        on:
+            branch: master
+            tags: true
