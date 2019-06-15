@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -12,7 +13,7 @@ def setup_logging(module: str) -> logging.Logger:
     log_filename = f"./logs/{module}-{time.strftime('%Y%m%d-%H%M%S')}.log"
     # log to both stderr and a file
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=os.environ.get("LOG_LEVEL", "DEBUG"),
         handlers=[logging.FileHandler(log_filename), logging.StreamHandler()],
     )
     logging.info(f"Logging to '{log_filename}'")
