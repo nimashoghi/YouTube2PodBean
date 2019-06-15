@@ -10,7 +10,6 @@ script: pytest
 deploy:
     - provider: script
       script: deploy.sh
-      deploy:
-          on:
-              tags: true
-              all_branches: true
+      on:
+          branch: master
+          tags: true
