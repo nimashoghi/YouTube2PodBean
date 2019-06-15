@@ -6,8 +6,7 @@ import pafy
 import pafy.g
 from pafy.backend_youtube_dl import YtdlPafy
 
-from app.util import (create_client, load_pickle, save_pickle, send_video,
-                      setup_logging)
+from app.util import create_client, load_pickle, save_pickle, send_video, setup_logging
 
 logging = setup_logging("app.services.youtube")
 
@@ -176,16 +175,6 @@ async def mark_video_as_processed(video: YtdlPafy):
     )
 
 
-async def get_new_uploads(refetch_latest=5):
-    async for video in get_all_uploads(refetch_latest=refetch_latest):
-        logging.debug(f"Checking video '{video}' in uploads...")
-        if await is_new_video(video):
-            logging.debug(f"New video '{video.title}' detected")
-            yield video
-        else:
-            logging.debug(f"Ignoring video '{video.title}' because it is not new.")
-
-
 if __name__ == "__main__":
 
     async def main():
@@ -212,7 +201,16 @@ if __name__ == "__main__":
                     f"YouTube module is enabled. Running YouTube detection loop."
                 )
 
-                async for video in get_new_uploads():
+                async for video in get_all_uploads():
+                    logging.debug(f"Checking video '{video}' in uploads...")
+                    if not await is_new_video(video):
+                        logging.debug(
+                            f"Ignoring video '{video.title}' because it is not new."
+                        )
+                        return
+
+                    logging.info(f"New video '{video.title}' detected. Processing")
+
                     await send_video(
                         client,
                         video,

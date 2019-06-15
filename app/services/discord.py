@@ -11,7 +11,9 @@ from app.util import (
     color_tuple_to_int,
     download_thumbnail,
     get_avatar,
+    is_already_posted,
     load_pickle,
+    mark_as_posted,
     new_video_event_handler,
     run_sync,
     save_pickle,
@@ -81,25 +83,6 @@ async def process_discord(video: YtdlPafy):
     logging.info(f"Successfully sent Discord WebHook for '{video.title}'")
 
 
-async def is_already_posted(id: str) -> bool:
-    from app.config.pickle import webhook_posted_pickle_path
-
-    posted_set = await load_pickle(
-        await webhook_posted_pickle_path(), get_default=lambda: set([])
-    )
-    return id in posted_set
-
-
-async def mark_as_posted(id: str):
-    from app.config.pickle import webhook_posted_pickle_path
-
-    webhook_posted_pickle_path = await webhook_posted_pickle_path()
-    post_history = await load_pickle(
-        webhook_posted_pickle_path, get_default=lambda: set([])
-    )
-    await save_pickle(webhook_posted_pickle_path, set([id, *post_history]))
-
-
 async def is_video_too_old(video: YtdlPafy):
     from app.config.discord import webhook_max_duration
 
@@ -115,9 +98,12 @@ if __name__ == "__main__":
     @new_video_event_handler("new_video/discord")
     async def on_new_video(video: YtdlPafy):
         from app.config.discord import webhook_enabled
+        from app.config.pickle import webhook_posted_pickle_path
 
         [enabled, too_old, already_posted] = await asyncio.gather(
-            webhook_enabled(), is_video_too_old(video), is_already_posted(video.videoid)
+            webhook_enabled(),
+            is_video_too_old(video),
+            is_already_posted(video.videoid, webhook_posted_pickle_path),
         )
 
         if not enabled:
@@ -139,4 +125,4 @@ if __name__ == "__main__":
         logging.info(f"'{video.title}' has not been posted to Discord. Posting.")
 
         await process_discord(video)
-        await mark_as_posted(video.videoid)
+        await mark_as_posted(video.videoid, webhook_posted_pickle_path)

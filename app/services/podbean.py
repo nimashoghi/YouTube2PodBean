@@ -16,7 +16,9 @@ from requests_oauthlib import OAuth2Session
 from app.util import (
     download_audio,
     download_thumbnail,
+    is_already_posted,
     load_pickle,
+    mark_as_posted,
     new_video_event_handler,
     run_sync,
     save_pickle,
@@ -317,19 +319,26 @@ if __name__ == "__main__":
     @new_video_event_handler("new_video/podbean", init=init)
     async def on_new_video(video: YtdlPafy, *, oauth: OAuth2Session):
         from app.config.podbean import client_id, podbean_enabled
+        from app.config.pickle import podbean_posted_pickle_path
 
-        [enabled, valid_title] = await asyncio.gather(
-            podbean_enabled(), is_valid_title(video.title)
+        [enabled, already_posted, valid_title] = await asyncio.gather(
+            podbean_enabled(),
+            is_already_posted(video.videoid, podbean_posted_pickle_path),
+            is_valid_title(video.title),
         )
 
         if not enabled:
-            logging.debug(
+            logging.info(
                 f"PodBean processing not enabled. Skipping video '{video.title}'."
             )
             return
 
+        if not already_posted:
+            logging.info(f"Video '{video.title}' has already been posted. Skipping.")
+            return
+
         if not valid_title:
-            logging.debug(
+            logging.info(
                 f"Video '{video.title}' skipped because the title was not compatible with the configuration patterns."
             )
             return
@@ -341,3 +350,4 @@ if __name__ == "__main__":
 
         logging.debug(f"Adding video '{video.title}' to PodBean")
         await add_to_podbean(oauth, video, audio_path, thumbnail_path)
+        await mark_as_posted(video.videoid, podbean_posted_pickle_path)

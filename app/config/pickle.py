@@ -9,6 +9,9 @@ processed_pickle_path = create_config(
 playlist_history_pickle_path = create_config(
     "Pickle:PlaylistHistory", default="pickles/playlist_history.pickle"
 )
+podbean_posted_pickle_path = create_config(
+    "Pickle:PodBeanPosted", default="pickles/podbean_posted.pickle"
+)
 webhook_posted_pickle_path = create_config(
     "Pickle:WebHookPosted", default="pickles/webhook_posted.pickle"
 )

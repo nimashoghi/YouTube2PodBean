@@ -48,3 +48,15 @@ async def save_pickle(path: str, object: Any) -> Any:
         await f.write(pickle.dumps(object))
 
     return object
+
+
+async def is_already_posted(id: str, get_pickle_path) -> bool:
+    pickle_path: str = await get_pickle_path()
+    posted_set = await load_pickle(pickle_path, get_default=lambda: set([]))
+    return id in posted_set
+
+
+async def mark_as_posted(id: str, get_pickle_path):
+    pickle_path: str = await get_pickle_path()
+    post_history = await load_pickle(pickle_path, get_default=lambda: set([]))
+    await save_pickle(pickle_path, set([id, *post_history]))

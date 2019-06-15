@@ -192,10 +192,13 @@
                 "PlaylistHistory": {
                     "type": "string"
                 },
+                "PodBeanPosted": {
+                    "type": "string"
+                },
                 "WebHookPosted": {
                     "type": "string"
                 },
-                "WpPostHistory": {
+                "WordPressPosted": {
                     "type": "string"
                 }
             }

@@ -9,7 +9,9 @@ from pafy.backend_youtube_dl import YtdlPafy
 
 from app.util import (
     URL_REGEX,
+    is_already_posted,
     load_pickle,
+    mark_as_posted,
     new_video_event_handler,
     run_sync,
     save_pickle,
@@ -111,33 +113,17 @@ async def is_video_too_old(video: YtdlPafy):
     )
 
 
-async def is_already_posted(id: str):
-    from app.config.pickle import wp_post_history_pickle_path
-
-    post_history = await load_pickle(
-        await wp_post_history_pickle_path(), get_default=lambda: set([])
-    )
-    return id in post_history
-
-
-async def mark_as_posted(id: str):
-    from app.config.pickle import wp_post_history_pickle_path
-
-    wp_post_history_pickle_path = await wp_post_history_pickle_path()
-    post_history = await load_pickle(
-        wp_post_history_pickle_path, get_default=lambda: set([])
-    )
-    await save_pickle(wp_post_history_pickle_path, set([id, *post_history]))
-
-
 if __name__ == "__main__":
 
     @new_video_event_handler("new_video/wordpress")
     async def on_new_video(video: YtdlPafy):
+        from app.config.pickle import wp_post_history_pickle_path
         from app.config.wordpress import wp_enabled
 
         [enabled, too_old, already_posted] = await asyncio.gather(
-            wp_enabled(), is_video_too_old(video), is_already_posted(video.videoid)
+            wp_enabled(),
+            is_video_too_old(video),
+            is_already_posted(video.videoid, wp_post_history_pickle_path),
         )
 
         if not enabled:
@@ -145,14 +131,14 @@ if __name__ == "__main__":
                 f"WordPress publishing not enabled. Skipping video '{video.title}'."
             )
             return
-        if too_old:
-            logging.info(
-                f"Video '{video.title}' is too old to upload to WordPress. Skipping."
-            )
-            return
         if already_posted:
             logging.info(
                 f"Video '{video.title}' is already posted to WordPress. Skipping"
+            )
+            return
+        if too_old:
+            logging.info(
+                f"Video '{video.title}' is too old to upload to WordPress. Skipping."
             )
             return
 
@@ -161,4 +147,4 @@ if __name__ == "__main__":
         )
 
         await post_video(video)
-        await mark_as_posted(video.videoid)
+        await mark_as_posted(video.videoid, wp_post_history_pickle_path)
