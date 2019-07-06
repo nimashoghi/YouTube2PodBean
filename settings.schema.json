@@ -178,6 +178,21 @@
                 }
             }
         },
+        "Logging": {
+            "title": "Logging Settings (Advanced)",
+            "description": "Do not touch these settings unless you know what you're doing.",
+            "type": "object",
+            "properties": {
+                "WebHookUrlList": {
+                    "title": "Error Log Web Hook URLs",
+                    "description": "List of Discord webhook URLs to publish error logs to. You can get Discord webhook URLs through the Discord channel settings: https://i.imgur.com/YDltDHJ.gifv",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+            }
+        },
         "Pickle": {
             "title": "Pickle Settings (Advanced)",
             "description": "Do not touch these settings unless you know what you're doing.",

@@ -1,22 +1,45 @@
 import asyncio
 import logging
+import logging.handlers
 import os
 import sys
-import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 
+from discord_webhook import DiscordWebhook
+
+from app.util import run_sync
+
+
+class DiscordWebhookLogHandler(logging.Handler):
+    def emit(self, record: logging.LogRecord) -> None:
+        from app.config.logging import logging_webhook_urls
+
+        if record.levelno < logging.ERROR:
+            return
+
+        content = self.format(record)
+        for url in logging_webhook_urls.sync():
+            DiscordWebhook(url=url, content=content).execute()
+
 
 def setup_logging(module: str) -> logging.Logger:
-    logger = logging.getLogger(module)
-
-    log_filename = f"./logs/{module}-{time.strftime('%Y%m%d-%H%M%S')}.log"
     # log to both stderr and a file
     logging.basicConfig(
+        format="[%(asctime)s - %(name)s - %(pathname)s:%(lineno)i] %(levelname)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
         level=os.environ.get("LOG_LEVEL", "DEBUG"),
-        handlers=[logging.FileHandler(log_filename), logging.StreamHandler()],
+        handlers=[
+            logging.StreamHandler(),
+            logging.handlers.TimedRotatingFileHandler(
+                filename=f"./logs/{module}", when="midnight"
+            ),
+            DiscordWebhookLogHandler(),
+        ],
     )
-    logging.info(f"Logging to '{log_filename}'")
+
+    logger = logging.getLogger(module)
+    logger.critical("STARTING LOGGING")
 
     def exception_handler(type, value, tb):
         logger.exception(f"Got an exception of type '{type}'", exc_info=value)
