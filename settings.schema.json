@@ -190,7 +190,7 @@
                     "items": {
                         "type": "string"
                     }
-                },
+                }
             }
         },
         "Pickle": {
