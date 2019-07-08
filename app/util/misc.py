@@ -52,3 +52,7 @@ def temporary_files(*files):
                 os.remove(f)
                 logging.debug(f"Removed '{f}'")
         logging.debug(f"Removed the following temporary files: '{files}'")
+
+
+def split_by_length(item, maxlen: int):
+    return [item[i : i + maxlen] for i in range(0, len(item), maxlen)]

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import logging.handlers
+import multiprocessing as mp
 import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -8,7 +9,29 @@ from typing import Callable
 
 from discord_webhook import DiscordWebhook
 
-from app.util import run_sync
+from app.util import run_sync, split_by_length
+
+DISCORD_WEBHOOK_CONTENT_MAX_LENGTH = 1900
+
+
+def send_webhook_message(content: str, url: str):
+    DiscordWebhook(url=url, content=content).execute()
+
+
+def webhook_log_process(content: str, url: str):
+
+    chunks = split_by_length(content, DISCORD_WEBHOOK_CONTENT_MAX_LENGTH)
+    num_chunks = len(chunks)
+    for i, chunk in enumerate(chunks):
+        pre = ""
+        post = ""
+        if num_chunks > 1:
+            if i != 0:
+                pre = "..."
+            if (i + 1) != num_chunks:
+                post = "..."
+
+        send_webhook_message(f"({i + 1}/{num_chunks}) {pre}{chunk}{post}", url)
 
 
 class DiscordWebhookLogHandler(logging.Handler):
@@ -20,7 +43,8 @@ class DiscordWebhookLogHandler(logging.Handler):
 
         content = self.format(record)
         for url in logging_webhook_urls.sync():
-            DiscordWebhook(url=url, content=content).execute()
+            process = mp.Process(target=webhook_log_process, args=(content, url))
+            process.start()
 
 
 def setup_logging(module: str) -> logging.Logger:
