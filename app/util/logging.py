@@ -9,7 +9,8 @@ from typing import Callable
 
 from discord_webhook import DiscordWebhook
 
-from app.util import run_sync, split_by_length
+from app.util.asyncio import run_sync
+from app.util.misc import split_by_length
 
 DISCORD_WEBHOOK_CONTENT_MAX_LENGTH = 1900
 
