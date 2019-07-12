@@ -20,7 +20,6 @@ def send_webhook_message(content: str, url: str):
 
 
 def webhook_log_process(content: str, url: str):
-
     chunks = split_by_length(content, DISCORD_WEBHOOK_CONTENT_MAX_LENGTH)
     num_chunks = len(chunks)
     for i, chunk in enumerate(chunks):

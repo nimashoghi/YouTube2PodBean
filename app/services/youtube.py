@@ -185,15 +185,15 @@ async def mark_video_as_processed(video: YtdlPafy):
 if __name__ == "__main__":
 
     async def main():
-        from app.config.youtube import polling_rate, youtube_enabled
+        from app.config.youtube import polling_rate, youtube_api_key, youtube_enabled
 
         logging.debug(f"Waiting for all other services to connect...")
         await asyncio.sleep(10)  # sleep 10s to wait for rabbitmq server to go up
 
         async with create_client() as client:
             while True:
-                [enabled, wait_time] = await asyncio.gather(
-                    youtube_enabled(), polling_rate()
+                [wait_time, api_key, enabled] = await asyncio.gather(
+                    polling_rate(), youtube_api_key(), youtube_enabled()
                 )
 
                 if not enabled:
@@ -201,6 +201,9 @@ if __name__ == "__main__":
                         f"YouTube module is disabled. Skipping detection loop."
                     )
                     continue
+
+                if api_key:
+                    pafy.set_api_key(api_key)
 
                 logging.debug(
                     f"YouTube module is enabled. Running YouTube detection loop."

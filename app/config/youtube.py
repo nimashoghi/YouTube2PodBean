@@ -1,7 +1,7 @@
 from app.util import create_config
 
 youtube_enabled = create_config("YouTube:Enabled", default=True)
-youtube_api_keys = create_config("YouTube:ExtraApiKeys", default=[])
+youtube_api_key = create_config("YouTube:ApiKey", default="")
 start_from = create_config("YouTube:StartFrom", default="")
 video_process_delay = create_config("YouTube:VideoProcessDelay", default=10.0)
 channel_id = create_config("YouTube:ChannelId")
