@@ -4,6 +4,7 @@
     "service": "youtube2podbean",
     "workspaceFolder": "/workspace",
     "shutdownAction": "stopCompose",
+    "postCreateCommand": "poetry install",
     "extensions": [
         "ms-python.python",
         "visualstudioexptteam.vscodeintellicode",

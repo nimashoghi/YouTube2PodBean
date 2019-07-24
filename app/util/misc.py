@@ -18,9 +18,11 @@ async def get_public_ip() -> str:
 
 
 def sanitize_title(title):
-    return "".join(
-        [c for c in title if c.isalpha() or c.isdigit() or c == " "]
-    ).rstrip()
+    return (
+        "".join([c for c in title if c.isalpha() or c.isdigit() or c == " "])
+        .rstrip()
+        .replace(" ", "_", -1)
+    )
 
 
 def color_tuple_to_int(tuple):
