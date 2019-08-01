@@ -17,9 +17,6 @@ def save(path: str, obj: Any):
         return pickle.dump(obj, f)
 
 
-# video_id = "5u8KTbCH_us"
-
-
 def remove_video(
     video_id: str,
     *,
