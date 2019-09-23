@@ -1,8 +1,0 @@
-version: "3.1"
-services:
-    youtube2podbean:
-        build: .
-        volumes:
-            - ..:/workspace
-            - ~/.gitconfig:/root/.gitconfig
-            - /var/run/docker.sock:/var/run/docker.sock
