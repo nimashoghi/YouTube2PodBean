@@ -1,3 +1,4 @@
+import asyncio
 import os
 import random
 import string
@@ -9,9 +10,13 @@ import youtube_dl.downloader.http
 from pafy.backend_youtube_dl import YtdlPafy
 
 from app.util.asyncio import run_sync
-from app.util.misc import get_url_extension, sanitize_title
+from app.util.misc import get_url_extension, sanitize_title, temporary_files
 
 logging = getLogger(__name__)
+
+
+def strip_extension(path: str):
+    return "".join(os.path.splitext(path)[:-1])
 
 
 async def make_temp_file(
@@ -91,3 +96,31 @@ async def download_audio(video: YtdlPafy) -> str:
     )
 
     return path
+
+
+class VideoConversionException(Exception):
+    pass
+
+
+async def convert_video(path: str):
+    output_path = f"{strip_extension(path)}.mp3"
+
+    # call ffmpeg and wait for it to finish
+    process = await asyncio.create_subprocess_exec(
+        "ffmpeg", "-i", path, "-ac", "2", "-ab", "128000", "-ar", "44100", output_path
+    )
+
+    return_code = await process.wait()
+
+    if return_code != 0:
+        stdout, stderr = await process.communicate()
+        raise VideoConversionException(
+            f"Failed to convert video located at {path}.\nStdout: {stdout}\nStderr: {stderr}"
+        )
+    return output_path
+
+
+async def download_audio_as_mp3(video: YtdlPafy) -> str:
+    original_audio = await download_audio(video)
+    with temporary_files(original_audio):
+        return await convert_video(original_audio)

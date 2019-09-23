@@ -4,12 +4,18 @@ WORKDIR /app
 COPY pyproject.toml /app/pyproject.toml
 RUN poetry export -f requirements.txt
 
-FROM python:3-stretch
+FROM python:3-alpine
 
+# copy directory
 WORKDIR /app
 COPY . .
-COPY --from=exporter /app/requirements.txt ./
 
+# install ffmpeg
+RUN apk add --no-cache ffmpeg
+
+# install Python requirements
+COPY --from=exporter /app/requirements.txt ./
 RUN pip install -r requirements.txt
 
-CMD ["python", "-m", "$YOUTUBE2PODBEAN_SERVICE"]
+ARG YOUTUBE2PODBEAN_SERVICE
+CMD ["python", "-m", "${YOUTUBE2PODBEAN_SERVICE}"]

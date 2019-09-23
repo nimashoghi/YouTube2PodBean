@@ -12,9 +12,18 @@ import aiohttp.web
 from pafy.backend_youtube_dl import YtdlPafy
 from requests_oauthlib import OAuth2Session
 
-from app.util import (download_audio, download_thumbnail, is_already_posted,
-                      load_pickle, mark_as_posted, new_video_event_handler,
-                      run_sync, save_pickle, setup_logging, temporary_files)
+from app.util import (
+    download_audio_as_mp3,
+    download_thumbnail,
+    is_already_posted,
+    load_pickle,
+    mark_as_posted,
+    new_video_event_handler,
+    run_sync,
+    save_pickle,
+    setup_logging,
+    temporary_files,
+)
 
 logging = setup_logging("app.services.podbean")
 
@@ -342,7 +351,7 @@ if __name__ == "__main__":
 
         logging.debug(f"Download audio and thumbnail for '{video.title}'")
         [audio_path, thumbnail_path] = await asyncio.gather(
-            download_audio(video), download_thumbnail(video)
+            download_audio_as_mp3(video), download_thumbnail(video)
         )
 
         with temporary_files(audio_path, thumbnail_path):
