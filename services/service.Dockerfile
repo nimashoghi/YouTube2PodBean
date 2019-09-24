@@ -1,0 +1,5 @@
+ARG BASE_VERSION=latest
+FROM nimashoghi/youtube2podbean:${BASE_VERSION}
+
+ARG YOUTUBE2PODBEAN_SERVICE
+CMD ["python", "-m", "${YOUTUBE2PODBEAN_SERVICE}"]
