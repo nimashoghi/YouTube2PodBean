@@ -84,7 +84,8 @@ async def download_thumbnail(video: YtdlPafy) -> str:
 
 async def download_audio(video: YtdlPafy) -> str:
     title = sanitize_title(video.title)
-    best = video.getbestaudio(preftype="m4a")
+    best = video.getbestaudio()
+    logging.debug(f"The best audio for {video.title} is of type {best.extension}")
 
     path = await make_temp_file(prefix=f"{title}-", suffix=f".{best.extension}")
     logging.debug(
@@ -104,15 +105,19 @@ class VideoConversionException(Exception):
 
 async def convert_video(path: str):
     output_path = f"{strip_extension(path)}.mp3"
+    logging.debug(f"Converting {path} to {output_path} using ffmpeg...")
 
     # call ffmpeg and wait for it to finish
     process = await asyncio.create_subprocess_exec(
         "ffmpeg", "-i", path, "-ac", "2", "-ab", "128000", "-ar", "44100", output_path
     )
 
-    return_code = await process.wait()
+    exit_code = await process.wait()
+    logging.debug(
+        f"Got the following exit code when converting {path} to {output_path}: {exit_code}"
+    )
 
-    if return_code != 0:
+    if exit_code != 0:
         stdout, stderr = await process.communicate()
         raise VideoConversionException(
             f"Failed to convert video located at {path}.\nStdout: {stdout}\nStderr: {stderr}"
