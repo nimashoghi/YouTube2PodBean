@@ -87,7 +87,9 @@ async def download_audio(video: YtdlPafy) -> str:
     best = video.getbestaudio()
     logging.debug(f"The best audio for {video.title} is of type {best.extension}")
 
-    path = await make_temp_file(prefix=f"{title}-", suffix=f".{best.extension}")
+    path = await make_temp_file(
+        prefix=f"{title}-downloaded", suffix=f".{best.extension}"
+    )
     logging.debug(
         f"Downloading audio stream of '{video.title}' (sanitizied = '{title}') from '{best.url}' into '{path}'"
     )
@@ -103,8 +105,7 @@ class VideoConversionException(Exception):
     pass
 
 
-async def convert_video(path: str):
-    output_path = f"{strip_extension(path)}.mp3"
+async def convert_video(path: str, output_path: str):
     logging.debug(f"Converting {path} to {output_path} using ffmpeg...")
 
     # call ffmpeg and wait for it to finish
@@ -127,5 +128,10 @@ async def convert_video(path: str):
 
 async def download_audio_as_mp3(video: YtdlPafy) -> str:
     original_audio = await download_audio(video)
+
+    output_path = await make_temp_file(prefix=f"{video.title}", suffix=".mp3")
+
     with temporary_files(original_audio):
-        return await convert_video(original_audio)
+        await convert_video(original_audio, output_path)
+
+    return output_path
