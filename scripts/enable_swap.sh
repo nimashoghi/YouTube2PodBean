@@ -5,7 +5,7 @@ fallocate -l 2048m /var/vm/swapfile1
 chmod 600 /var/vm/swapfile1
 mkswap /var/vm/swapfile1
 
-cat > FILE.txt <<EOF
+cat > /etc/systemd/system/var-vm-swapfile1.swap <<EOF
 [Unit]
 Description=Turn on swap
 
