@@ -127,11 +127,16 @@ async def convert_video(path: str, output_path: str):
 
 
 async def download_audio_as_mp3(video: YtdlPafy) -> str:
+    logging.debug(f"Downloading original audio for {video.title}")
     original_audio = await download_audio(video)
+    logging.debug(f"Downloaded original audio for {video.title}")
 
-    output_path = await make_temp_file(prefix=f"{video.title}", suffix=".mp3")
+    title = sanitize_title(video.title)
+    output_path = await make_temp_file(prefix=f"{title}", suffix=".mp3")
 
     with temporary_files(original_audio):
+        logging.debug(f"Converting audio to mp3 for {video.title}")
         await convert_video(original_audio, output_path)
+        logging.debug(f"Converted audio to mp3 for {video.title}")
 
     return output_path
