@@ -7,7 +7,7 @@ authors = ["Nima Shoghi <nimashoghi@gmail.com>"]
 [tool.poetry.dependencies]
 python = "^3.7"
 requests-oauthlib = "^1.2"
-pafy = "^0.5.4"
+pafy = "^0.5.5"
 youtube-dl = "*"
 discord_webhook = "^0.4.1"
 python-dateutil = "^2.8"
