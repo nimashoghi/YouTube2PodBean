@@ -150,7 +150,7 @@ description = "execute discord webhooks"
 name = "discord-webhook"
 optional = false
 python-versions = "*"
-version = "0.4.1"
+version = "0.6.0"
 
 [package.dependencies]
 requests = ">=2.19.1"
@@ -602,7 +602,7 @@ python-versions = ">=2.7"
 version = "0.5.2"
 
 [metadata]
-content-hash = "194adb85346e5ca31797f906bf59c6f2c84f338f22b3903c47279ea488da3ae7"
+content-hash = "0963913dc139bb526723dfd072aa49313350dea3b938af76fa330a0cb52ea0c4"
 python-versions = "^3.7"
 
 [metadata.hashes]
@@ -620,7 +620,7 @@ chardet = ["84ab92ed1c4d4f16916e05906b6b75a6c0fb5db821cc65e70cbd64a3e2a5eaae", "
 click = ["2335065e6395b9e67ca716de5f7526736bfa6ceead690adf616d925bdc622b13", "5b94b49521f6456670fdb30cd82a4eca9412788a93fa6dd6df72c94d5a8ff2d7"]
 colorama = ["05eed71e2e327246ad6b38c540c4a3117230b19679b875190486ddd2d721422d", "f8ac84de7840f5b9c4e3347b3c1eaa50f7e49c2b07596221daec5edaabbd7c48"]
 colorthief = ["079cb0c95bdd669c4643e2f7494de13b0b6029d5cdbe2d74d5d3c3386bd57221", "b04fc8ce5cf9c888768745e29cb19b7b688d5711af6fba26e8057debabec56b9"]
-discord-webhook = ["5ab99bbebdd825122b8a36058e54c6136b2eb7047c9a8f6dc55940e19f542481", "707e677a9e350918c6415db78318ac939b9cf6c354be08c0db34b3ed20be021d"]
+discord-webhook = ["392c3a95316e41f07d763fdd418e59d0ac4c4aa5b06c22f488a9dc0cc3c2b6cf", "ca502bea7b579e4b971174fb275952c48bed8d222520621a1b602a509c1a31f1"]
 docopt = ["49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491"]
 entrypoints = ["589f874b313739ad35be6e0cd7efde2a4e9b6fea91edcc34e58ecbb8dbe56d19", "c70dd71abe5a8c85e55e12c19bd91ccfeec11a6e99044204511f9ed547d48451"]
 flake8 = ["45681a117ecc81e870cbf1262835ae4af5e7a8b08e40b944a8a6e6b895914cfb", "49356e766643ad15072a789a20915d3c91dc89fd313ccd71802303fd67e4deca"]
