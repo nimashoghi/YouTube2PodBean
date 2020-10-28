@@ -13,7 +13,7 @@ discord_webhook = "^0.7.0"
 python-dateutil = "^2.8"
 colorthief = "^0.2.1"
 python-wordpress-xmlrpc = "^2.3"
-aiofiles = "^0.4.0"
+aiofiles = "^0.6.0"
 aiohttp = "^3.6"
 hbmqtt = "^0.9.6"
 
