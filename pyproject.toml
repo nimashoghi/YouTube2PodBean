@@ -22,7 +22,7 @@ pylint = {version = "^2.4",allows-prereleases = true}
 black = {version = "^19.10b0",allows-prereleases = true}
 flake8 = "^3.7"
 pytest = "^5.3"
-bandit = "^1.6"
+bandit = "^1.7"
 mypy = "^0.761"
 
 [build-system]
