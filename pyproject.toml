@@ -18,7 +18,7 @@ aiohttp = "^3.6"
 hbmqtt = "^0.9.6"
 
 [tool.poetry.dev-dependencies]
-pylint = {version = "^2.4",allows-prereleases = true}
+pylint = {version = "^2.6",allows-prereleases = true}
 black = {version = "^19.10b0",allows-prereleases = true}
 flake8 = "^3.7"
 pytest = "^5.3"
