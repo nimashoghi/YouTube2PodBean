@@ -21,7 +21,7 @@ hbmqtt = "^0.9.6"
 pylint = {version = "^2.4",allows-prereleases = true}
 black = {version = "^19.10b0",allows-prereleases = true}
 flake8 = "^3.7"
-pytest = "^5.3"
+pytest = "^6.2"
 bandit = "^1.6"
 mypy = "^0.761"
 
